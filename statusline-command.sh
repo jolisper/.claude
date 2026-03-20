@@ -8,14 +8,18 @@ cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
 dirname=$(basename "$cwd")
 now=$(date +%s)
 
-# Section toggles — defaults (all on except lines)
+# Defaults (fallback when no config files exist)
 branch=on; model=on; ctx_bar=on; cache_pct=on; coherence_warning=on
-rate_limits=on; sess_duration=on; wall_time=on; api_duration=on
-think_pct=on; lines=off; cost=on; time=on
+rate_limits=on; sess_duration=on; wall_time=on; api_duration=off
+think_pct=off; lines=off; cost=off; time=on
 
-# Override from config file if it exists
+# Shared config (tracked in git)
 conf="$HOME/.claude/statusline.conf"
 [ -f "$conf" ] && . "$conf"
+
+# Local overrides (not tracked by git)
+local_conf="$HOME/.claude/statusline.local.conf"
+[ -f "$local_conf" ] && . "$local_conf"
 
 # Git branch + dirty flag + diff stats
 branch_str=""

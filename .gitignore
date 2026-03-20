@@ -7,6 +7,7 @@
 !settings.json
 !statusline.conf
 !statusline-command.sh
+statusline.local.conf
 
 # Allowlist directories and their contents
 !agents/
