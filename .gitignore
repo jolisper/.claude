@@ -1,0 +1,20 @@
+# Ignore everything by default
+*
+
+# Allowlist shareable files
+!.gitignore
+!CLAUDE.md
+!settings.json
+!statusline.conf
+!statusline-command.sh
+
+# Allowlist directories and their contents
+!agents/
+!agents/**
+!skills/
+!skills/**
+!commands/
+!commands/**
+
+# Re-ignore personal/generated files within allowed dirs
+agents/*.bak
