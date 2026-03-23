@@ -5,7 +5,7 @@ description: >
   requests like "commit my changes", "make a commit", or "stage and commit".
   Analyzes unstaged changes, groups them into logical commits, proposes a
   Conventional Commits message, and confirms before committing.
-disable-model-invocation: false
+disable-model-invocation: true
 allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
 ---
 

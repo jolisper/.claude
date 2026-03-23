@@ -1,7 +1,7 @@
 ---
 name: recap
 description: Print a quick recap of the current session — what was done, decided, and where things stand. Invoke after long sessions, interruptions, or context compaction.
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: "optional focus topic (e.g. 'what changed in auth')"
 allowed-tools: Bash(git:*)
 ---

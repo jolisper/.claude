@@ -3,7 +3,7 @@ name: run-tests
 description: >
   Use when the user asks to run, execute, or check tests. Detects the project
   type, cleans build artifacts, and runs the test suite.
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Bash(bun:*) Bash(pnpm:*) Bash(yarn:*) Bash(npm:*) Bash(cargo:*) Bash(go:*) Bash(mvn:*) Bash(gradle:*) Bash(pytest:*) Bash(mix:*) Bash(bundle:*) Bash(dotnet:*) Bash(make:*) Bash(bash:*) Read Glob
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: git-diff
 description: Summarize uncommitted changes and check semantic coherence — responsibility fit and consistency — before committing
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Bash(git diff:*) Bash(git status:*) Read Grep
 ---
 

@@ -9,8 +9,8 @@ Personal Claude Code configuration — skills, agents, and settings.
 |---|---|---|
 | `/git-status` | Concise working-tree overview with branch hierarchy | yes |
 | `/git-log` | View or search recent commit history | yes |
-| `/git-diff` | Summarize uncommitted changes and check coherence | no |
-| `/git-commit` | Stage + commit with Conventional Commits message | yes |
+| `/git-diff` | Summarize uncommitted changes and check coherence | yes |
+| `/git-commit` | Stage + commit with Conventional Commits message | no |
 | `/git-push` | Push to remote, handles divergence and rebases | no |
 | `/git-pull` | Pull with guided merge-conflict resolution | yes |
 | `/git-rebase` | Rebase onto base branch with conflict resolution | no |
@@ -20,11 +20,11 @@ Personal Claude Code configuration — skills, agents, and settings.
 
 | Skill | What it does | Model-invocable |
 |---|---|---|
-| `/run-tests` | Detect project type and run tests | no |
+| `/run-tests` | Detect project type and run tests | yes |
 | `/refactor` | Refactor following Object Calisthenics rules | no |
 | `/sdk` | Switch SDKMAN-managed SDK version (Java, Node, …) | yes |
 | `/try` | Investigate a solution in an isolated worktree | no |
-| `/recap` | Print a concise session recap | no |
+| `/recap` | Print a concise session recap | yes |
 
 ### Meta
 
