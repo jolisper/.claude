@@ -46,9 +46,9 @@ Personal Claude Code configuration — skills, agents, and settings.
 
 ## Settings workflow
 
-Claude Code writes all settings to a single `settings.json` file — including personal preferences like model choice that should not be shared. To version-control only the sharable parts, `settings.json` is kept **untracked** in `.gitignore` most of the time. It is only force-added to git during an explicit update step, then immediately untracked again.
+**Policy**: `settings.json` is shared config only — `permissions`, `hooks`, and `statusLine`. Everything personal (model, theme, verbosity) goes in `settings.local.json` and is never committed.
 
-This means normal `git add` will never accidentally commit private settings, and collaborators who clone the repo get the shared config without any personal overrides leaking in.
+The challenge is that Claude Code writes all settings to `settings.json` regardless of their nature, so UI changes will silently accumulate personal keys there. The whitelist + migration step enforces the policy automatically: before a commit, any non-whitelisted key is evicted from `settings.json` and moved to `settings.local.json`. This means it doesn't matter how a setting got into `settings.json` — the contract holds.
 
 ### Files
 
@@ -73,3 +73,13 @@ This does four things in sequence:
 2. Force-adds `settings.json` (bypasses `.gitignore`)
 3. Commits with the message you provided
 4. Untracks `settings.json` again (`git rm --cached`) so future commits won't touch it
+
+### Personal overrides (settings.local.json)
+
+Do not edit `settings.json` directly for personal preferences. Put model choice, theme, verbosity, and any other personal settings in `settings.local.json` instead. Claude Code merges it on top of `settings.json` at runtime.
+
+If you change a setting through the Claude Code UI, it will land in `settings.json`. Run `migrate-settings.py` to evict it to `settings.local.json` before it can be accidentally committed:
+
+```bash
+python3 scripts/migrate-settings.py
+```
