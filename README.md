@@ -46,12 +46,30 @@ Personal Claude Code configuration — skills, agents, and settings.
 
 ## Settings workflow
 
-- `settings.json` — tracked base config (shared keys: `permissions`, `hooks`, `statusLine`)
-- `settings.local.json` — untracked local overrides (model preferences, etc.)
-- `scripts/settings-whitelist.txt` — defines which keys stay in `settings.json`
+Claude Code writes all settings to a single `settings.json` file — including personal preferences like model choice that should not be shared. To version-control only the sharable parts, `settings.json` is kept **untracked** in `.gitignore` most of the time. It is only force-added to git during an explicit update step, then immediately untracked again.
 
-**To update the shared config:**
+This means normal `git add` will never accidentally commit private settings, and collaborators who clone the repo get the shared config without any personal overrides leaking in.
+
+### Files
+
+| File | Tracked | Purpose |
+|---|---|---|
+| `settings.json` | no (normally) | Full working config — shared + personal keys merged |
+| `settings.local.json` | no | Personal-only overrides (model, theme, etc.) |
+| `scripts/settings-whitelist.txt` | yes | Declares which keys are safe to share (`permissions`, `hooks`, `statusLine`) |
+| `scripts/migrate-settings.py` | yes | Strips non-whitelisted keys from `settings.json`, moves them to `settings.local.json` |
+| `scripts/update-settings.sh` | yes | One-step script: migrate → force-add → commit → untrack |
+
+### Updating the shared config
+
+When you want to commit a change to `permissions`, `hooks`, or `statusLine`, first make sure `scripts/settings-whitelist.txt` includes any new keys you want to share, then run:
+
 ```bash
 bash scripts/update-settings.sh "chore(settings): <reason>"
 ```
-This runs `migrate-settings.py` (strips non-whitelisted keys), force-adds `settings.json`, commits, then untracks it again — all in one step.
+
+This does four things in sequence:
+1. Runs `migrate-settings.py` — moves any non-whitelisted keys out of `settings.json` into `settings.local.json`
+2. Force-adds `settings.json` (bypasses `.gitignore`)
+3. Commits with the message you provided
+4. Untracks `settings.json` again (`git rm --cached`) so future commits won't touch it
