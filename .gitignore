@@ -4,7 +4,6 @@
 # Allowlist shareable files
 !.gitignore
 !CLAUDE.md
-!settings.json
 !statusline.conf
 !statusline-command.sh
 statusline.local.conf
@@ -16,6 +15,8 @@ statusline.local.conf
 !skills/**
 !commands/
 !commands/**
+!scripts/
+!scripts/**
 
 # Re-ignore personal/generated files within allowed dirs
 agents/*.bak
