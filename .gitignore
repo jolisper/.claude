@@ -4,6 +4,7 @@
 # Allowlist shareable files
 !.gitignore
 !CLAUDE.md
+!README.md
 !statusline.conf
 !statusline-command.sh
 statusline.local.conf
