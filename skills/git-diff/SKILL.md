@@ -2,7 +2,7 @@
 name: git-diff
 description: Summarize uncommitted changes and check semantic coherence — responsibility fit and consistency — before committing
 disable-model-invocation: true
-allowed-tools: Bash(git:*) Read Grep
+allowed-tools: Bash(git diff:*) Bash(git status:*) Read Grep
 ---
 
 **Rule: run every command as a single, standalone call. Never use `&&`, `;`, pipes, or compound expressions. One command per tool call.**

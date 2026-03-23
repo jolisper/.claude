@@ -3,7 +3,7 @@ name: git-log
 description: Use this skill to view recent git history or search commit messages. Invoke when the user asks to see the git log, recent commits, or wants to find a commit by keyword.
 disable-model-invocation: false
 argument-hint: "[search term]"
-allowed-tools: Bash(git:*) Bash(bash:*)
+allowed-tools: Bash(bash ~/.claude/skills/git-log/scripts/:*)
 ---
 
 ## Available scripts

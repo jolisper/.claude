@@ -6,7 +6,7 @@ description: >
   Analyzes unstaged changes, groups them into logical commits, proposes a
   Conventional Commits message, and confirms before committing.
 disable-model-invocation: false
-allowed-tools: Bash(git:*) Bash(python3:*) Read
+allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
 ---
 
 Stage changes and commit them using a Conventional Commits message. Follow this protocol:

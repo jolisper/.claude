@@ -6,7 +6,7 @@ description: >
   "sync with main". Guides conflict resolution file-by-file with a per-file
   menu.
 disable-model-invocation: true
-allowed-tools: Bash(git:*) Bash(python3:*) Read Edit
+allowed-tools: Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git branch:*) Bash(git fetch:*) Bash(git rebase:*) Bash(git stash:*) Bash(git diff:*) Bash(git add:*) Bash(git checkout:*) Bash(python3:*) Read Edit
 ---
 
 Update the current branch by rebasing it onto its base branch (the branch it was originally created from). Follow this protocol:

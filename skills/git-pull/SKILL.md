@@ -2,7 +2,7 @@
 name: git-pull
 description: Pull remote changes with guided merge conflict resolution
 disable-model-invocation: false
-allowed-tools: Bash(git:*) Bash(python3:*) Read Edit
+allowed-tools: Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git pull:*) Bash(git stash:*) Bash(git diff:*) Bash(git checkout:*) Bash(git add:*) Bash(git merge:*) Bash(git commit:*) Bash(python3:*) Read Edit
 ---
 
 Perform a `git pull` following this protocol:

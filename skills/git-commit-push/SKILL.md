@@ -6,7 +6,7 @@ description: >
   or "ship it". Runs the full commit protocol followed by the full push
   protocol.
 disable-model-invocation: false
-allowed-tools: Bash(git:*) Bash(python3:*) Bash(bash:*)
+allowed-tools:
 ---
 
 Stage changes, commit them with a Conventional Commits message, then push to the remote.

@@ -7,7 +7,7 @@ description: >
   Shows: tracked/untracked changed files, a conceptual summary of the changes,
   and the branch hierarchy (parent branch upstream and child branches downstream).
 disable-model-invocation: false
-allowed-tools: Bash(bash:*)
+allowed-tools: Bash(bash ~/.claude/skills/git-status/scripts/:*)
 ---
 
 ## Step 1 — Gather raw data

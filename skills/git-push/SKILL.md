@@ -5,7 +5,7 @@ description: >
   Invoke for requests like "push", "push my changes", or "push to origin".
   Detects divergence and handles rebased, amended, and genuinely diverged branches.
 disable-model-invocation: true
-allowed-tools: Bash(git:*) Bash(bash:*)
+allowed-tools: Bash(git rev-parse:*) Bash(git log:*) Bash(git push:*) Bash(git fetch:*) Bash(bash ~/.claude/skills/git-push/scripts/:*)
 ---
 
 Push the current branch to its remote. Follow this protocol:
