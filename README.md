@@ -44,6 +44,34 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `architect` | Critique designs or produce architecture specs; escalates via AskUserQuestion when trade-offs need a human decision |
 | `try` | Investigate and experiment in an isolated worktree; produces a structured try-report in `docs/try-agent/` |
 
+## Status Line
+
+A custom status line rendered by `statusline-command.sh` via a `StopHook`. Configured in `settings.json` as:
+
+```json
+"statusLine": { "type": "command", "command": "sh ~/.claude/statusline-command.sh" }
+```
+
+Format: `HH:MM dirname (branch*) | [model] ▓▓░░ ctx% (cache%) | rate_5h% rate_7d% | ~sess wall (api think%) | cost`
+
+| Segment | Default | Description |
+|---|---|---|
+| `time` | on | Current time (`HH:MM`) |
+| `branch` | on | Git branch + dirty flag (`*`) + diff stats (`+N/-N`) |
+| `model` | on | Active model in brackets (hidden when default) |
+| `ctx_bar` | on | Color-coded progress bar + context % used |
+| `cache_pct` | on | Cache hit ratio in parentheses |
+| `coherence_warning` | on | Blinking red dot when context > 50% and cache < 20% |
+| `rate_limits` | on | 5-hour and 7-day rate limit usage + time to reset |
+| `sess_duration` | on | Elapsed wall time since first prompt (`~Xm Ys`) |
+| `wall_time` | on | Cumulative API wall time |
+| `api_duration` | off | Total API round-trip time |
+| `think_pct` | off | Thinking time as % of wall time |
+| `lines` | off | Lines added/removed this session |
+| `cost` | off | Session cost in USD |
+
+Shared toggles live in `statusline.conf` (tracked). Personal overrides go in `statusline.local.conf` (not tracked).
+
 ## Settings workflow
 
 **Policy**: `settings.json` is shared config only — `permissions`, `hooks`, and `statusLine`. Everything personal (model, theme, verbosity) goes in `settings.local.json` and is never committed.
