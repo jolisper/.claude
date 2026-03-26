@@ -28,7 +28,13 @@ if [ "$branch" = "on" ]; then
     _branch=$(git -C "$cwd" branch --no-color 2>/dev/null | sed -n 's/^\* //p')
     if [ -n "$_branch" ]; then
       dirty=$(git -C "$cwd" status --porcelain 2>/dev/null)
-      [ -n "$dirty" ] && _branch="${_branch}*"
+      echo "$dirty" | grep -qv '^??' && _branch="${_branch}*"
+      echo "$dirty" | grep -q '^??' && _branch="${_branch}?"
+
+      blue=$(printf '\033[34m')
+      green=$(printf '\033[32m')
+      red=$(printf '\033[31m')
+      reset=$(printf '\033[0m')
 
       # Sum all added/removed lines (staged + unstaged) vs HEAD
       diff_stats=$(git -C "$cwd" diff HEAD --numstat 2>/dev/null)
@@ -41,9 +47,9 @@ if [ "$branch" = "on" ]; then
       fi
 
       if [ "$diff_added" -gt 0 ] || [ "$diff_removed" -gt 0 ]; then
-        branch_str=" (${_branch} +${diff_added}/-${diff_removed})"
+        branch_str=" (${blue}${_branch}${reset} ${green}+${diff_added}${reset}/${red}-${diff_removed}${reset})"
       else
-        branch_str=" (${_branch})"
+        branch_str=" (${blue}${_branch}${reset})"
       fi
     fi
   fi
@@ -240,7 +246,9 @@ fi
 # Build output by accumulating segments
 time_prefix=""
 [ "$time" = "on" ] && [ -n "$time_str" ] && time_prefix="${time_str} "
-out="${time_prefix}${dirname}"
+highlight=$(printf '\033[1;37m')
+reset_highlight=$(printf '\033[0m')
+out="${time_prefix}${highlight}${dirname}${reset_highlight}"
 
 # Branch appends directly to dirname (no separator)
 [ "$branch" = "on" ] && out="${out}${branch_str}"
