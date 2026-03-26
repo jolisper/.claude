@@ -52,7 +52,11 @@ A custom status line rendered by `statusline-command.sh` via a `StopHook`. Confi
 "statusLine": { "type": "command", "command": "sh ~/.claude/statusline-command.sh" }
 ```
 
+**Example:**
+
 ![Status line screenshot](docs/assets/statusline.png)
+
+---
 
 Format: `dirname (branch*? +N/-N) | [model] ▓▓░░ ctx% (cache%) | rate_5h%(reset) rate_7d%(reset) | ~sess wall (api think%)`
 
