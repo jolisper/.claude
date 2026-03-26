@@ -15,7 +15,7 @@ Stage changes, commit them with a Conventional Commits message, then push to the
 
 # Phase 1 — Commit
 
-Invoke the `git-commit` skill to run the full commit protocol. Complete all commits before proceeding.
+Read `~/.claude/skills/git-commit/SKILL.md` and follow its protocol in full. Complete all commits before proceeding.
 
 If the commit fails or the user aborts at any point, stop — do not proceed to Phase 2.
 
@@ -28,4 +28,4 @@ After all commits are done, ask the user:
 
 Only proceed if Phase 1 completed successfully and the user confirmed.
 
-Invoke the `git-push` skill to run the full push protocol.
+Read `~/.claude/skills/git-push/SKILL.md` and follow its protocol in full.
