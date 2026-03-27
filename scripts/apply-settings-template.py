@@ -7,7 +7,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 TEMPLATE = REPO_ROOT / "settings.template.json"
-LOCAL = REPO_ROOT / "settings.local.json"
+LOCAL = REPO_ROOT / "settings.json"
 
 CONFLICT_NOTES = {
     "statusLine": (
