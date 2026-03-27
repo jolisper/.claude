@@ -18,8 +18,8 @@ allowed-tools: Write Read WebFetch Bash(mkdir:*)
 Read `$ARGUMENTS`.
 
 - If empty, ask: "What skill would you like to create? Give me a description, file path, or URL."
-- If `$ARGUMENTS` starts with `http://` or `https://`, fetch it with WebFetch and use the content as design context.
-- If `$ARGUMENTS` looks like a file path (contains `/` or `\` or ends in a known extension), read it with Read and use the content as design context.
+- If `$ARGUMENTS` starts with `http://` or `https://`, fetch it with WebFetch and use the content as design context. If WebFetch returns an error, report the URL and error to the user and ask them to provide a plain description instead.
+- If `$ARGUMENTS` looks like a file path (contains `/` or `\` or ends in a known extension), read it with Read and use the content as design context. If Read fails, report the path and error to the user and ask them to provide a plain description instead.
 - Otherwise treat it as a plain description and proceed to Phase 2.
 
 ## Phase 2: Clarify (single batched message)
@@ -43,6 +43,10 @@ Never ask about things that can be confidently inferred from the description or 
 Before drafting frontmatter, read `~/.claude/skills/skill-create/references/spec.md`.
 Before drafting the body, read `~/.claude/skills/skill-create/references/best-practices.md`.
 If the target agent is not Claude Code, also read `~/.claude/skills/skill-create/references/agent-conventions.md`.
+
+If any reference file cannot be read, report which file failed and stop — do not draft without the full spec and best-practices.
+
+Even if the spec and best-practices feel familiar from a previous invocation, still read both reference files before drafting — the body checklist depends on their current content, which may have changed.
 
 **Script evaluation:**
 Before drafting, decide whether the skill would benefit from a bundled script.
@@ -74,6 +78,11 @@ Produce a complete SKILL.md draft in a fenced code block.
 - Inline output templates only when format consistency matters
 - Keep SKILL.md under 500 lines; use `references/` files for large reference material
 - Add only what the agent lacks; omit what it already knows
+- For discipline-enforcing rules, include counter-rationalizations ("even when X, still do Y")
+- Specify failure paths: error output format, recovery steps, subprocess failure contracts
+- Include an explicit "when NOT to use / when to abort" section for destructive or context-sensitive skills
+- When delegating to another skill or subprocess, explicitly restate tool restrictions and behavioral contracts at the boundary
+- If logic overlaps with an existing sibling skill, reuse the same implementation pattern
 - If scripts planned: use the path form that matches the **installation scope already chosen in Phase 2**:
   - Global (`~/.claude/skills/`) → `~/.claude/skills/<name>/scripts/<script>.sh`
   - Project-local (`.claude/skills/`) → `$(pwd)/.claude/skills/<name>/scripts/<script>.sh`
@@ -100,8 +109,15 @@ Wait for the user's response. If (b), apply the requested changes, show the upda
 On (a):
 
 1. Determine the install path from Phase 2 (global or project-local) and the confirmed skill name.
-2. Run `mkdir -p <skill-directory>` and, if reference files were planned, `mkdir -p <skill-directory>/references`.
-3. Write `SKILL.md` to `<skill-directory>/SKILL.md`.
-3a. If scripts were planned: run `mkdir -p <skill-directory>/scripts` and write each script to `<skill-directory>/scripts/<name>.sh`.
-4. Write any planned reference files to `<skill-directory>/references/`.
-5. Confirm: "Skill created at `<path>/SKILL.md`."
+2. Attempt to Read `<skill-directory>/SKILL.md`. If it exists, ask:
+   ```
+   A skill named `<name>` already exists at `<path>`. How do you want to proceed?
+   (a) Overwrite it
+   (b) Cancel
+   ```
+   On (b): stop.
+3. Run `mkdir -p <skill-directory>` and, if reference files were planned, `mkdir -p <skill-directory>/references`.
+4. Write `SKILL.md` to `<skill-directory>/SKILL.md`.
+4a. If scripts were planned: run `mkdir -p <skill-directory>/scripts` and write each script to `<skill-directory>/scripts/<name>.sh`.
+5. Write any planned reference files to `<skill-directory>/references/`.
+6. Confirm: "Skill created at `<path>/SKILL.md`."

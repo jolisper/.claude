@@ -36,7 +36,9 @@ Read `~/.claude/skills/skill-improve/references/spec.md`.
 Read `~/.claude/skills/skill-improve/references/best-practices.md`.
 Read `~/.claude/skills/skill-improve/references/using-scripts.md`.
 
-Analyze the skill against all three documents. If a focal point was provided, give it extra scrutiny — look specifically for issues related to that area while still running the full checklist. Check:
+If any reference file cannot be read, report which file failed and stop — do not proceed with an incomplete checklist.
+
+Analyze the skill against all three documents. Even if the skill looks well-written at a glance, complete every item in every checklist section — common issues hide in details like allowed-tools minimality, missing $ARGUMENTS gates, and absent failure paths. If a focal point was provided, give it extra scrutiny — look specifically for issues related to that area while still running the full checklist. Check:
 
 **Frontmatter:**
 - `name` is present, kebab-case, 1–64 chars, no consecutive hyphens, matches the directory name
@@ -53,6 +55,11 @@ Analyze the skill against all three documents. If a focal point was provided, gi
 - Large reference material lives in `references/` files, not inline
 - SKILL.md is under 500 lines
 - No documenting what the agent already knows
+- Discipline-enforcing rules include counter-rationalizations for likely skip scenarios
+- Failure paths are specified: error output format, recovery steps, subprocess failure contracts
+- Explicit "when NOT to use / abort" conditions are present for destructive or context-sensitive skills
+- Delegation boundaries explicitly restate tool restrictions and behavioral contracts
+- Shared logic with sibling skills uses the same implementation (no silent divergence)
 
 **Script evaluation** (using criteria from `references/using-scripts.md`):
 - Does the skill run commands with complex flag values, format strings, or special characters?
@@ -114,6 +121,8 @@ How do you want to proceed?
 Wait for the user's response. On (d), ask which items to apply and confirm the selection before proceeding.
 
 ## Phase 5: Apply
+
+If the target skill directory is under version control and has unstaged changes, note this to the user before applying — so they can commit or stash first if they want a clean diff.
 
 Apply only the approved fixes. Edit the SKILL.md in place using the Edit tool. Edit existing scripts in place using the Edit tool.
 

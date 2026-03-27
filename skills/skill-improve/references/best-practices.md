@@ -93,3 +93,54 @@ Don't document things the agent already knows (how to use git, how to write JSON
 ## $ARGUMENTS
 
 Use `$ARGUMENTS` to reference user-supplied input when the skill accepts a parameter. Check for empty `$ARGUMENTS` at the start and ask for input if needed.
+
+---
+
+## Robustness patterns
+
+See `references/robustness-patterns-rationale.md` for the origin and reasoning behind these patterns.
+
+### Rationalization resistance
+
+For any rule that a model might skip under pressure ("it seems simple enough", "we're almost done"), include an explicit counter-rationalization in the skill body.
+
+**Do:** "Run the full test suite before marking done — even when the change looks trivial."
+**Don't:** "Run tests before marking done."
+
+Add a note for the most likely skip scenario: "Even if only one line changed, still run tests — single-line changes have caused regressions before."
+
+### Failure contract completeness
+
+Specify what happens when the skill fails, what the output format is, and what the recovery path is. Do not describe only the happy path.
+
+**Do:** Include a section: "If X fails: report the error to the user, explain what to check, and stop — do not proceed to the next step."
+**Don't:** Describe only the successful workflow and leave failure handling implicit.
+
+This is especially important when the skill delegates to a subprocess or subagent — document what happens if that subprocess fails.
+
+### Exclusion conditions
+
+Include an explicit "when NOT to use this skill" or "abort if" section, especially for destructive or context-sensitive operations.
+
+**Do:** "Abort and warn the user if the current branch appears to be a shared or protected branch."
+**Don't:** Assume the user will only invoke the skill in safe contexts.
+
+Gate on context the skill can check (branch name, dirty working tree, missing upstream) and surface the risk before acting.
+
+### Delegation transparency
+
+When a skill delegates to another skill or subprocess at runtime, explicitly restate the tool restrictions and behavioral contracts at the delegation boundary.
+
+**Do:** "Launch a subagent with `allowed-tools: Read Grep` — do not pass Write or Bash."
+**Don't:** Rely on tool restrictions being silently inherited from a runtime-read SKILL.md.
+
+If the delegating skill has a blank `allowed-tools`, note explicitly why and what the effective tool surface is during execution.
+
+### Cluster consistency
+
+If this skill shares logic with one or more sibling skills (e.g., conflict resolution, error formatting, confirmation gate patterns), use the same implementation — same script, same steps, same wording.
+
+**Do:** "Use the same `resolve-conflict.py` script used in `git-pull`."
+**Don't:** Re-implement the same logic inline with slight variations.
+
+Divergence between sibling skills creates maintenance risk and inconsistent user experience. If you find shared logic, extract it to a script or reference file so both skills use the same source.
