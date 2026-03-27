@@ -4,6 +4,9 @@
 
 input=$(cat)
 
+# Exit early if input is not valid JSON (e.g. invoked without Claude Code piping data)
+echo "$input" | jq -e . >/dev/null 2>&1 || exit 0
+
 cwd=$(echo "$input" | jq -r '.workspace.current_dir // .cwd // ""')
 dirname=$(basename "$cwd")
 now=$(date +%s)
@@ -28,8 +31,8 @@ if [ "$branch" = "on" ]; then
     _branch=$(git -C "$cwd" branch --no-color 2>/dev/null | sed -n 's/^\* //p')
     if [ -n "$_branch" ]; then
       dirty=$(git -C "$cwd" status --porcelain 2>/dev/null)
-      echo "$dirty" | grep -qv '^??' && _branch="${_branch}*"
-      echo "$dirty" | grep -q '^??' && _branch="${_branch}?"
+      [ -n "$dirty" ] && echo "$dirty" | grep -qv '^??' && _branch="${_branch}*"
+      [ -n "$dirty" ] && echo "$dirty" | grep -q '^??' && _branch="${_branch}?"
 
       blue=$(printf '\033[34m')
       green=$(printf '\033[32m')
@@ -57,6 +60,7 @@ fi
 
 # Context window percentage — always computed (coherence_warning needs ctx_pct)
 ctx_pct=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | awk '{printf "%.0f", $1}')
+ctx_pct=${ctx_pct:-0}
 
 # Progress bar — only built when ctx_bar is on
 bar=""
@@ -87,6 +91,7 @@ fi
 
 # Wall-clock duration from total_duration_ms (always parsed — think_pct also needs duration_ms)
 duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // 0' | awk '{printf "%.0f", $1}')
+duration_ms=${duration_ms:-0}
 duration_str=""
 if [ "$wall_time" = "on" ]; then
   dur_s=$(( duration_ms / 1000 ))
@@ -134,6 +139,7 @@ api_duration_str=""
 think_pct_val=0
 if [ "$api_duration" = "on" ] || [ "$think_pct" = "on" ]; then
   api_ms=$(echo "$input" | jq -r '.cost.total_api_duration_ms // 0' | awk '{printf "%.0f", $1}')
+  api_ms=${api_ms:-0}
   if [ "$api_duration" = "on" ]; then
     api_s=$(( api_ms / 1000 ))
     api_m=$(( api_s / 60 ))
@@ -147,7 +153,9 @@ if [ "$api_duration" = "on" ] || [ "$think_pct" = "on" ]; then
     fi
   fi
   if [ "$think_pct" = "on" ]; then
-    think_pct_val=$(awk "BEGIN {printf \"%.0f\", ($api_ms > 0 && $duration_ms > 0) ? $api_ms * 100 / $duration_ms : 0}")
+    if [ "$api_ms" -gt 0 ] && [ "$duration_ms" -gt 0 ]; then
+      think_pct_val=$(awk "BEGIN {printf \"%.0f\", $api_ms * 100 / $duration_ms}")
+    fi
   fi
 fi
 
@@ -176,12 +184,12 @@ if [ "$rate_limits" = "on" ]; then
 
   if [ -n "$five_pct" ] || [ -n "$week_pct" ]; then
     if [ -n "$five_pct" ]; then
-      five_str="$(printf '%.0f' "$five_pct")%"
+      five_str="$(echo "$five_pct" | awk '{printf "%.0f", $1}')%"
       [ -n "$five_resets_at" ] && five_str="${five_str}($(fmt_remaining "$five_resets_at"))"
       rate_limits_str="$five_str"
     fi
     if [ -n "$week_pct" ]; then
-      week_str="$(printf '%.0f' "$week_pct")%"
+      week_str="$(echo "$week_pct" | awk '{printf "%.0f", $1}')%"
       [ -n "$week_resets_at" ] && week_str="${week_str}($(fmt_remaining "$week_resets_at"))"
       rate_limits_str="${rate_limits_str:+$rate_limits_str }$week_str"
     fi
