@@ -8,7 +8,7 @@ description: >
   and best practices, and writing the file to disk. Applies agent-specific
   conventions for Claude Code, OpenCode, Gemini CLI, and Codex. Use even if
   you haven't decided on the skill name, target agent, or exact scope yet.
-disable-model-invocation: true
+disable-model-invocation: false
 argument-hint: "short description or URL/file reference for the skill to create"
 allowed-tools: Write Read WebFetch Bash(mkdir:*)
 ---
