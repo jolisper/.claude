@@ -44,9 +44,19 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `architect` | Critique designs or produce architecture specs; escalates via AskUserQuestion when trade-offs need a human decision |
 | `try` | Investigate and experiment in an isolated worktree; produces a structured try-report in `docs/try-agent/` |
 
+## Setup
+
+After cloning, run the setup script once to apply the required settings to your local config:
+
+```bash
+bash scripts/apply-settings-template.sh
+```
+
+This merges `settings.template.json` into `settings.local.json`. On conflict it prompts you key by key — you can keep your current value, adopt the template value, or skip. The status line won't work without the `statusLine` key, so the script will warn you if you skip it.
+
 ## Status Line
 
-A custom status line rendered by `statusline-command.sh` via a `StopHook`. Configured in `settings.json` as:
+A custom status line rendered by `statusline-command.sh`. Wired up via `settings.template.json`:
 
 ```json
 "statusLine": { "type": "command", "command": "sh ~/.claude/statusline-command.sh" }
@@ -89,7 +99,10 @@ The challenge is that Claude Code writes all settings to `settings.json` regardl
 | File | Tracked | Purpose |
 |---|---|---|
 | `settings.json` | no (normally) | Full working config — shared + personal keys merged |
-| `settings.local.json` | no | Personal-only overrides (model, theme, etc.) |
+| `settings.local.json` | no | Personal-only overrides (model, theme, etc.) — takes precedence over `settings.json` |
+| `settings.template.json` | yes | Repo-required settings (`statusLine`, `hooks`) — applied via `apply-settings-template.sh` |
+| `scripts/apply-settings-template.sh` | yes | Merges `settings.template.json` into `settings.local.json`, prompting on conflicts |
+| `scripts/apply-settings-template.py` | yes | Implementation of the above |
 | `scripts/settings-whitelist.txt` | yes | Declares which keys are safe to share (`permissions`, `hooks`, `statusLine`) |
 | `scripts/migrate-settings.py` | yes | Strips non-whitelisted keys from `settings.json`, moves them to `settings.local.json` |
 | `scripts/update-settings.sh` | yes | One-step script: migrate → force-add → commit → untrack |

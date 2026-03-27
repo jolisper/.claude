@@ -1,0 +1,18 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "sh ~/.claude/statusline-command.sh"
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); sid=$(echo \"$input\" | jq -r '.session_id'); test -f \"/tmp/claude-session-start-$sid\" || date +%s > \"/tmp/claude-session-start-$sid\""
+          }
+        ]
+      }
+    ]
+  }
+}
