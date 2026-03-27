@@ -81,31 +81,19 @@ For each conflicting file, in order:
    - **(a) Keep ours** — show what "ours" looks like (the `<<<<<<< HEAD` side), ask the user to confirm ("Type 'yes' to apply or 'abort' to cancel"), then run `git checkout --ours <file>` and `git add <file>` via Bash, and move to the next conflicting file.
    - **(b) Keep theirs** — show what "theirs" looks like (the `=======` → `>>>>>>>` side), ask the user to confirm ("Type 'yes' to apply or 'abort' to cancel"), then run `git checkout --theirs <file>` and `git add <file>` via Bash, and move to the next conflicting file.
    - **(c) Keep both** — show the resolved snippet (both sides, no conflict markers) in a fenced code block. Then apply via Bash (do NOT use the Edit tool):
-     1. Strip conflict markers keeping both sides:
-        ```
-        python3 -c "
-        import re, sys; f=sys.argv[1]; c=open(f).read()
-        c=re.sub(r'^<{7}[^\n]*\n','',c,flags=re.MULTILINE)
-        c=re.sub(r'^={7}\n','',c,flags=re.MULTILINE)
-        c=re.sub(r'^>{7}[^\n]*\n','',c,flags=re.MULTILINE)
-        open(f,'w').write(c)
-        " <file>
-        ```
+     1. Run `python3 ~/.claude/skills/git-rebase/scripts/resolve-conflict.py --help` to confirm the interface, then:
+        `python3 ~/.claude/skills/git-rebase/scripts/resolve-conflict.py --file <file> --strategy keep-both`
      2. Run `git diff --check <file>` — if markers remain, report line numbers and ask the user to fix manually, then re-verify.
      3. If clean: run `git add <file>` and move to the next conflicting file.
    - **(d) Edit manually** — follow Step 4c below, then move to the next conflicting file.
    - **(e) Abort merge** — run `git merge --abort` and stop.
-   - **(f) Apply recommendation** — show the recommended resolved snippet in a fenced code block. Then apply via Bash (do NOT use the Edit tool, even if the strip approach won't produce the right result). Two sub-cases:
-     - **Simple "keep both" (recommended text = both sides concatenated verbatim):** use the same python3 strip command from option (c).
-     - **Custom resolution (recommended text differs from simple concatenation):** write the recommended text to a temp file, then use python3 to replace the conflict block:
+   - **(f) Apply recommendation** — show the recommended resolved snippet in a fenced code block. Then apply via Bash (do NOT use the Edit tool). Two sub-cases:
+     - **Simple "keep both" (recommended text = both sides concatenated verbatim):**
+       `python3 ~/.claude/skills/git-rebase/scripts/resolve-conflict.py --file <file> --strategy keep-both`
+     - **Custom resolution (recommended text differs from simple concatenation):** write the recommended text to a temp file, then call the script:
        ```
-       python3 -c "
-       import re, sys
-       f = sys.argv[1]; r = sys.argv[2]
-       c = open(f).read(); replacement = open(r).read()
-       c = re.sub(r'<{7}[^\n]*\n.*?>{7}[^\n]*\n', replacement, c, count=1, flags=re.DOTALL)
-       open(f, 'w').write(c)
-       " <file> /tmp/_conflict_resolution.txt
+       python3 -c "open('/tmp/_conflict_res.txt','w').write('''<recommended text>''')"
+       python3 ~/.claude/skills/git-rebase/scripts/resolve-conflict.py --file <file> --strategy custom --resolution-file /tmp/_conflict_res.txt
        ```
      After applying (either sub-case), run `git diff --check <file>` — if markers remain, report line numbers and ask the user to fix. If clean, run `git add <file>` and move to the next file.
 

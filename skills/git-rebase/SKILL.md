@@ -6,6 +6,7 @@ description: >
   "sync with main". Guides conflict resolution file-by-file with a per-file
   menu.
 disable-model-invocation: true
+argument-hint: "target branch (optional)"
 allowed-tools: Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git branch:*) Bash(git fetch:*) Bash(git rebase:*) Bash(git stash:*) Bash(git diff:*) Bash(git add:*) Bash(git checkout:*) Bash(python3:*) Read Edit
 ---
 
@@ -15,16 +16,30 @@ Update the current branch by rebasing it onto its base branch (the branch it was
 
 ## Step 1 — Pre-flight check
 
+**Target branch override**: If `$ARGUMENTS` is set and non-empty, use it as the base branch and skip auto-detection in step 3 below.
+
 Run each of these commands separately:
 
 1. `git status`
 2. `git rev-parse --abbrev-ref HEAD` — note the current branch name.
-3. **Detect the base branch**: First check the branch's reflog for its actual creation source:
+3. **Detect the base branch** (skip if `$ARGUMENTS` provided): First check the branch's reflog for its actual creation source:
    - Run `git log -g --format="%gs" <current-branch>` and look for an entry matching `branch: Created from <source>`. Use the most recent such entry and extract `<source>` as the base branch.
    - If the reflog yields no result, fall back to checking common branch names with `git branch -a`: prefer `main`, then `master`, then `develop`, then `dev`.
    - If neither approach yields a clear result, ask the user: "Which branch is the base branch for this rebase?"
-4. `git fetch origin`
-5. `git log HEAD..origin/<base> --oneline` — if output is empty after fetch, report "Already up to date" and stop.
+4. **Shared branch guard**: Run `git branch -r --list origin/<current-branch>`.
+   - If the remote branch exists, warn the user:
+     ```
+     ⚠ Warning: `<current-branch>` exists on the remote. Rebasing will rewrite its
+     history, causing divergence for anyone else tracking this branch.
+
+     How do you want to proceed?
+     (a) Proceed — I understand this branch is shared and intend to rewrite its history
+     (b) Abort
+     ```
+   - Even if the user explicitly asked to rebase, still surface this warning — the user may not have considered that others are tracking this branch.
+   - On (b): stop.
+5. `git fetch origin`
+6. `git log HEAD..origin/<base> --oneline` — if output is empty after fetch, report "Already up to date" and stop.
 
 ## Step 2 — Handle dirty working tree
 
@@ -140,3 +155,4 @@ After all conflicting files are resolved:
    (b) No — skip
    ```
    If the user chooses (a): **clean the build first** (e.g., `npm run clean`, `make clean`, `cargo clean`, etc.), then run the project's build/test command (check for `package.json` scripts, `Makefile`, `Cargo.toml`, `pyproject.toml`, etc.) and report pass/fail. If tests fail, show the relevant errors and ask the user how to proceed.
+   If the user chooses (b): note — "A clean rebase does not guarantee semantic correctness; it only means git resolved textual conflicts. Consider running your test suite manually before pushing."
