@@ -56,7 +56,9 @@ This merges `settings.template.json` into `settings.local.json`. On conflict it 
 
 ## Status Line
 
-A custom status line rendered by `statusline-command.sh`. Wired up via `settings.template.json`:
+A custom status line rendered by `statusline-command.sh`. Wired up via `settings.template.json`.
+
+**Dependencies:** `jq`, `awk`, `git`, `sed` — all must be available on `PATH`.
 
 ```json
 "statusLine": { "type": "command", "command": "sh ~/.claude/statusline-command.sh" }
