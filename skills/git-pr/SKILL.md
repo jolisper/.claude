@@ -7,7 +7,7 @@ description: >
   Handles base-branch detection, title/description drafting, preview, and API submission.
 version: 1.0.0
 disable-model-invocation: false
-allowed-tools: Bash(git rev-parse:*) Bash(git log:*) Bash(git remote:*) Bash(bash ~/.claude/skills/git-pr/scripts/:*) Bash(python3:*)
+allowed-tools: Bash(git rev-parse:*) Bash(git log:*) Bash(git remote:*) Bash(bash ~/.claude/skills/git-pr/scripts/:*) Write
 ---
 
 ## Available scripts
@@ -29,8 +29,6 @@ Run each command separately. Never chain with `&&`, `||`, or `;`.
    - SSH: `git@bitbucket.org:<workspace>/<repo-slug>.git`
    - HTTPS: `https://bitbucket.org/<workspace>/<repo-slug>.git`
    If the URL does not match either pattern, stop: "Cannot parse workspace/repo from remote URL: `<url>`. Is this a Bitbucket repository?"
-3. `python3 -c "import os; print('set' if os.environ.get('BITBUCKET_TOKEN') else '')"` → if output is not `set`, stop:
-   > `BITBUCKET_TOKEN` is not set. Run `export BITBUCKET_TOKEN=<your-token>` and try again.
 
 ## Step 2 — Detect base branch
 
@@ -104,13 +102,7 @@ PR preview:
 
 ## Step 6 — Create the PR
 
-Write the description to `/tmp/_pr_description.txt`:
-```bash
-python3 -c "
-import sys
-sys.stdout.write(\"\"\"<description>\"\"\")
-" > /tmp/_pr_description.txt
-```
+Use the `Write` tool to write the description to `/tmp/_pr_description.txt` with the exact description content (no extra escaping needed).
 
 Run `--help` on the script first to confirm flags, then invoke:
 ```bash
