@@ -11,7 +11,11 @@ allowed-tools: Read Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git
 
 Stage changes, commit them with a Conventional Commits message, then push to the remote.
 
-This skill delegates to `git-commit` and `git-push` at runtime by reading their SKILL.md files. Their combined tool surface is: `Read`, `Bash(git status:*)`, `Bash(git diff:*)`, `Bash(git add:*)`, `Bash(git commit:*)`, `Bash(git log:*)`, `Bash(python3:*)`, `Bash(git rev-parse:*)`, `Bash(git push:*)`, `Bash(git fetch:*)`, `Bash(bash ~/.claude/skills/git-push/scripts/:*)`.
+This skill delegates to `git-commit` and `git-push` at runtime by reading their SKILL.md files.
+
+## Pre-flight
+
+Before starting, run `git rev-parse --abbrev-ref --symbolic-full-name @{u}`. If the command fails (no upstream set), warn the user and stop — do not begin committing work that cannot be pushed.
 
 ---
 
@@ -30,6 +34,6 @@ After all commits are done, ask the user:
 
 Only proceed if Phase 1 completed successfully and the user confirmed.
 
-Read `~/.claude/skills/git-push/SKILL.md` and follow its protocol in full.
+Read `~/.claude/skills/git-push/SKILL.md` and follow its protocol in full, with one override: **skip the pre-push confirmation prompt in Step 3** (the "Ready to push? (a) Push (b) Abort" menu) — the user already confirmed in Phase 1. Proceed directly to Step 4 (the push command).
 
 If the push fails at any point: note to the user that their commits are already saved locally — no work is lost. Suggest running `/git-push` to retry the push separately when ready.
