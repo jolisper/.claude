@@ -43,10 +43,17 @@ If no such line is found, fall back to `main`. If `main` is also the source bran
 
 ## Step 3 — Collect commits
 
-Run both separately:
+First, resolve the base branch ref. Run:
 ```
-git log <base-branch>..HEAD --oneline
-git log <base-branch>..HEAD --format="%s%n%b"
+git rev-parse --verify <base-branch>
+```
+
+If that exits non-zero (local branch does not exist), use `origin/<base-branch>` as the ref for the remaining steps. Otherwise use `<base-branch>`.
+
+Then run both separately (using the resolved ref):
+```
+git log <resolved-ref>..HEAD --oneline
+git log <resolved-ref>..HEAD --format="%s%n%b"
 ```
 
 If the first command returns no output, stop: "No commits found between `<base-branch>` and `<source-branch>`. Nothing to PR."
