@@ -13,8 +13,12 @@ Options:
   --title             PR title
   --description-file  Path to a file containing the PR description (markdown)
 
-Reads BITBUCKET_TOKEN from the environment.
+Reads BITBUCKET_TOKEN and BITBUCKET_USERNAME from the environment.
 Outputs the JSON response body, then a line: status=created|unauthorized|forbidden|error
+
+Examples:
+  create-pr.sh --workspace myteam --repo my-repo --source feat/login --destination main \
+    --title "feat(auth): add login page" --description-file /tmp/_pr_description.txt
 EOF
 }
 

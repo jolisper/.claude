@@ -5,10 +5,19 @@ description: >
   Invoke when the user says "create a PR", "open a pull request", "submit a PR",
   "raise a pull request", or similar. Requires BITBUCKET_TOKEN in the environment.
   Handles base-branch detection, title/description drafting, preview, and API submission.
+  Requires BITBUCKET_TOKEN and BITBUCKET_USERNAME in the environment.
 version: 1.0.0
 disable-model-invocation: false
 allowed-tools: Agent Bash(bash:*) Write
 ---
+
+## Abort early if
+
+- The current branch is `main`, `master`, `develop`, or `trunk` — these are shared branches.
+- The `origin` remote URL is not a `bitbucket.org` URL — this skill only targets Bitbucket.
+- There are no commits between the source branch and its detected base — nothing to PR.
+
+If any of these conditions apply, stop immediately and explain the reason to the user.
 
 ## Available scripts
 
@@ -126,7 +135,7 @@ PR preview:
 
 Use the `Write` tool to write the description to `/tmp/_pr_description.txt` with the exact description content (no extra escaping needed).
 
-Run `--help` on the script first to confirm flags, then invoke:
+Run `--help` on the script first to confirm flags, then invoke. If the script exits non-zero, show the error output to the user and stop — do not proceed to Step 4.
 ```bash
 bash ~/.claude/skills/git-pr/scripts/create-pr.sh \
   --workspace "<WORKSPACE>" \
