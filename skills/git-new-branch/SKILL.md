@@ -7,7 +7,7 @@ description: >
   development branch first, then creates and checks out the new branch.
   Accepts an optional branch name following the Conventional Branch spec
   (e.g. feat/add-login, fix/issue-42-header).
-disable-model-invocation: false
+disable-model-invocation: true
 argument-hint: "feat/branch-description"
 allowed-tools: Bash(git:*)
 ---

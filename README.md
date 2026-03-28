@@ -14,6 +14,8 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `/git-push` | Push to remote, handles divergence and rebases | no |
 | `/git-pull` | Pull with guided merge-conflict resolution | yes |
 | `/git-rebase` | Rebase onto base branch with conflict resolution | no |
+| `/git-new-branch` | Create new branch from latest main/master | no |
+| `/git-pr` | Create a Bitbucket pull request from current branch | no |
 | `/git-commit-push` | Stage → commit → push in one workflow | yes |
 
 ### Project

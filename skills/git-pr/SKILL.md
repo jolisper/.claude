@@ -7,7 +7,7 @@ description: >
   Handles base-branch detection, title/description drafting, preview, and API submission.
   Requires BITBUCKET_TOKEN and BITBUCKET_USERNAME in the environment.
 version: 1.0.0
-disable-model-invocation: false
+disable-model-invocation: true
 allowed-tools: Agent Bash(bash:*) Write
 ---
 
