@@ -54,27 +54,33 @@ if [[ -z "${BITBUCKET_TOKEN:-}" ]]; then
   exit 1
 fi
 
+if [[ -z "${BITBUCKET_USERNAME:-}" ]]; then
+  echo "Error: BITBUCKET_USERNAME is not set." >&2
+  exit 1
+fi
+
 DESCRIPTION=$(cat "$DESC_FILE")
 
-python3 - <<PYEOF > /tmp/_pr_payload.json
-import json
+PR_TITLE="$TITLE" PR_DESC="$DESCRIPTION" PR_SOURCE="$SOURCE" PR_DEST="$DESTINATION" \
+python3 - <<'PYEOF' > /tmp/_pr_payload.json
+import json, os
 payload = {
-    "title": ${TITLE@Q},
-    "description": ${DESCRIPTION@Q},
-    "source": {"branch": {"name": ${SOURCE@Q}}},
-    "destination": {"branch": {"name": ${DESTINATION@Q}}}
+    "title": os.environ["PR_TITLE"],
+    "description": os.environ["PR_DESC"],
+    "source": {"branch": {"name": os.environ["PR_SOURCE"]}},
+    "destination": {"branch": {"name": os.environ["PR_DEST"]}}
 }
 print(json.dumps(payload))
 PYEOF
 
 RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
-  -H "Authorization: Bearer ${BITBUCKET_TOKEN}" \
+  -u "${BITBUCKET_USERNAME}:${BITBUCKET_TOKEN}" \
   -H "Content-Type: application/json" \
   "https://api.bitbucket.org/2.0/repositories/${WORKSPACE}/${REPO}/pullrequests" \
   -d @/tmp/_pr_payload.json)
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-BODY=$(echo "$RESPONSE" | head -n -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
 
 echo "$BODY"
 
