@@ -42,7 +42,10 @@ Ask: `Description (lowercase, hyphens only — e.g. add-login, issue-42-header):
 Process the user's reply:
 
 - **Spec-compliant** (lowercase a–z/0–9/hyphens, no leading/trailing/consecutive hyphens): assemble `<type>/<description>` and jump to **→ Validate**.
-- **Colloquial** (contains spaces, mixed case, or informal phrasing): read `~/.claude/skills/git-new-branch/references/conventional-branch-spec.md`, then use the translation patterns and examples there to interpret the intent and present 3 spec-compliant description options numbered for selection. Ask the user to pick one or type their own. Re-process until compliant.
+- **Colloquial** (contains spaces, mixed case, or informal phrasing): read `~/.claude/skills/git-new-branch/references/conventional-branch-spec.md`, then use the translation patterns and examples there to interpret the intent and present **4 spec-compliant description options** numbered for selection:
+  - Options 1–2: **3-word kebab names** (e.g. `add-login-flow`, `fix-auth-token`)
+  - Options 3–4: **4-word kebab names** (e.g. `add-user-login-flow`, `fix-auth-token-refresh`)
+  Ask the user to pick one (1–4) or type their own. Re-process until compliant.
 - **Violates a specific rule**: state which rule was broken in one line, ask them to re-enter.
 
 ### → Validate
@@ -59,7 +62,18 @@ Check the full branch name against the Conventional Branch spec:
 
 If **any rule fails**: list each violation with a one-line explanation, then ask the user for a corrected name. Re-validate. Repeat until all rules pass.
 
-## Phase 2 — Update main branch
+## Phase 2 — Pre-flight check
+
+Run `git status --short`. If the output is non-empty (dirty working tree), warn the user:
+
+```
+Warning: you have uncommitted changes. Checking out '<main-branch>' may affect your working tree.
+Proceed anyway? (y/n)
+```
+
+Stop if the user answers anything other than `y`.
+
+## Phase 3 — Update main branch
 
 Run `git branch --list main`. If output is non-empty, use `main`. Otherwise run `git branch --list master` — if non-empty, use `master`. If neither exists, ask the user which local branch to update from.
 
@@ -67,9 +81,9 @@ Check out the main branch with `git checkout <main-branch>`.
 
 Pull the latest changes with `git pull`.
 
-If the pull fails, stop and report the error. Do not proceed to Phase 3.
+If the pull fails, stop and report the error (include the git error output). Tell the user to check: network connectivity, upstream remote config (`git remote -v`), or whether a rebase/merge is already in progress. Do not proceed to Phase 4.
 
-## Phase 3 — Create the branch
+## Phase 4 — Create the branch
 
 Run `git checkout -b <validated-branch-name>`.
 
