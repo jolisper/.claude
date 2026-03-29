@@ -2,7 +2,7 @@
 name: memory-list
 description: Use this skill when you want to list all Claude Code auto memory entries for the current project. Shows a concise index; the user can request full detail for a specific entry by number.
 disable-model-invocation: true
-allowed-tools: Bash(pwd:*) Read
+allowed-tools: Bash(pwd:*) Read Glob
 ---
 
 List all Claude Code auto memory entries for the current project.
@@ -31,13 +31,21 @@ List all Claude Code auto memory entries for the current project.
 [2] ...
 ```
 
-7. After the list, ask:
+7. Scan the memory directory for `.md` files (excluding `MEMORY.md`) that are **not referenced** in `MEMORY.md`. These are archived memories. If any exist, append a note below the index:
+
+```
+─────────────────────────────────────────
+N archived memory file(s) found in this project.
+Use /memory-archive to manage them.
+```
+
+8. After the list (and optional archive notice), ask:
 
 ```
 Enter a number for full details, or (x) to exit memory-list.
 ```
 
-8. If the user enters a valid index number, print the full body of that memory entry (verbatim, including **Why:** and **How to apply:** if present), then ask:
+9. If the user enters a valid index number, print the full body of that memory entry (verbatim, including **Why:** and **How to apply:** if present), then ask:
 
 ```
 (l) Show list again, or (x) to exit memory-list.
@@ -47,9 +55,9 @@ Enter a number for full details, or (x) to exit memory-list.
    - If the user enters `x`, stop.
    - If the user enters anything else, repeat this prompt.
 
-9. If the user enters an invalid number or an out-of-range value at step 7, reply "Invalid selection — enter a number between 1 and N, or (x) to exit." and repeat the prompt.
+10. If the user enters an invalid number or an out-of-range value at step 8, reply "Invalid selection — enter a number between 1 and N, or (x) to exit." and repeat the prompt.
 
-10. If the user enters `x` at step 7, stop.
+11. If the user enters `x` at step 8, stop.
 
 ## Failure paths
 
