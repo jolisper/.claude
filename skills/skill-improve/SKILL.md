@@ -51,6 +51,7 @@ Analyze the skill against all three documents. Even if the skill looks well-writ
 **Body:**
 - Instructions are stepwise procedures ("do X, then Y"), not declarations ("output should be Z")
 - Destructive or irreversible actions have explicit confirmation gates
+- Menu standard: "How do you want to proceed?" prompts use a lettered `(a)/(b)/...` menu; binary yes/no is expressed as `(a) Proceed / (b) Cancel` — never bare yes/no; item selection from a numbered list may use numeric input; every lettered menu that can abort a workflow includes a Cancel option
 - `$ARGUMENTS` is checked at the start; skill asks for input if empty
 - Large reference material lives in `references/` files, not inline
 - SKILL.md is under 500 lines
