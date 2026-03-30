@@ -74,6 +74,7 @@ Produce a complete SKILL.md draft in a fenced code block.
 - Match prescriptiveness to reversibility: be strict for destructive ops, flexible elsewhere
 - Use `$ARGUMENTS` to reference the user-supplied parameter (Claude Code)
 - Include confirmation gates before destructive actions
+- Avoid compound Bash expressions (`&&`, `||`, pipes) in skill steps — they trigger approval prompts and interrupt flow; use separate Bash calls instead
 - Follow the menu standard: "How do you want to proceed?" prompts use a lettered `(a)/(b)/...` menu; binary yes/no is expressed as `(a) Proceed / (b) Cancel` — never bare yes/no; item selection from a numbered list may use numeric input; every lettered menu that can abort a workflow includes a Cancel option
 - Provide defaults, not menus — pick one approach and note alternatives briefly
 - Inline output templates only when format consistency matters

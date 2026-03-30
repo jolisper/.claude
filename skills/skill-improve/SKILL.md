@@ -64,7 +64,7 @@ Analyze the skill against all three documents. Even if the skill looks well-writ
 
 **Script evaluation** (using criteria from `references/using-scripts.md`):
 - Does the skill run commands with complex flag values, format strings, or special characters?
-- Does it chain multiple commands with `&&`, `||`, or `echo "..."` separators?
+- Does it chain multiple commands with `&&`, `||`, or `echo "..."` separators? (flag as flow-interruption issue — prefer separate Bash calls; move to a script only if complexity warrants it)
 - Does it involve loops, conditional branching, or batch iteration?
 - Does it use text processing (`grep`, `awk`, `sed`) with patterns derived from user input?
 - Is consistent, reproducible behavior critical — where agent-constructed commands risk variation?
