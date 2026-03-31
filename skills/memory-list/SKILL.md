@@ -20,6 +20,20 @@ List all Claude Code auto memory entries for the current project.
    > No memory found for this project at `<full-path>`.
    Then stop.
 
+4a. **Inline content detection.** Scan `MEMORY.md` for inline sections:
+   - Split the content into sections by `## ` headings.
+   - A section is **inline** if its body contains no link line matching `- [...](...)` (a markdown link-list entry).
+   - Ignore the top-level `# Memory` heading and blank lines when classifying.
+   - If **no** inline sections are found, proceed silently to step 5 — do not output anything.
+   - If one or more inline sections are found, display this **before** the index:
+     ```
+     ⚠ MEMORY.md contains N inline section(s) not linked to files:
+       - "## <heading>"
+       - ...
+     These entries are invisible to memory skills. Use /memory-manage to migrate them.
+     ```
+   - Continue to step 5 — process only linked entries as normal.
+
 5. For each entry listed in `MEMORY.md`, read the linked `.md` file from the same directory to extract its frontmatter (`name`, `type`, `description`).
 
 6. Present a concise index in this format:

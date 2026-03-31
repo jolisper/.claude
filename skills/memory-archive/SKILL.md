@@ -20,6 +20,20 @@ Manage unindexed (archived) Claude Code memory files for the current project —
    > No memory found for this project at `<full-path>`.
    Then stop.
 
+4a. **Inline content detection.** Scan `MEMORY.md` for inline sections:
+   - Split the content into sections by `## ` headings.
+   - A section is **inline** if its body contains no link line matching `- [...](...)` (a markdown link-list entry).
+   - Ignore the top-level `# Memory` heading and blank lines when classifying.
+   - If **no** inline sections are found, proceed silently to step 5 — do not output anything.
+   - If one or more inline sections are found, display this **before** the archive list:
+     ```
+     ⚠ MEMORY.md contains N inline section(s) not linked to files:
+       - "## <heading>"
+       - ...
+     These entries are invisible to memory skills. Use /memory-manage to migrate them.
+     ```
+   - Continue to step 5 — process archived files as normal.
+
 5. Glob all `.md` files in the memory directory (excluding `MEMORY.md` itself). Cross-reference against `MEMORY.md` to find files that are **not referenced** in the index. These are the archived memories.
 
 6. If no archived files are found, report:
