@@ -1,15 +1,18 @@
 ---
 name: skill-improve
 description: >
-  Use this skill to audit and improve an existing skill. Invoke when you want to
-  analyze a skill's SKILL.md against the agentskills.io specification and best
-  practices, see a prioritized list of issues, and apply fixes with your approval.
-  Accepts a skill name (e.g. "git-log") or a direct path to a SKILL.md file.
+  Audit and improve an existing skill. Reads the target SKILL.md, analyzes it
+  against the agentskills.io specification and best practices, produces a
+  prioritized list of HIGH/MEDIUM/LOW findings, and applies fixes with your
+  approval. Accepts a skill name (e.g. "git-log") or a direct path to a SKILL.md
+  file.
 disable-model-invocation: true
 argument-hint: "<skill name or path to SKILL.md> [focal point]"
 allowed-tools: Read Edit Write Glob Bash(mkdir:*)
 when_to_use: >
-  Invoke when the user wants to audit, improve, or fix an existing skill.
+  Invoke when the user names a skill to review or improve, shares a SKILL.md
+  path, or is editing a SKILL.md file. Also surfaces automatically when any
+  SKILL.md is in the working context.
 effort: high
 paths:
   - "**/SKILL.md"
@@ -33,6 +36,14 @@ Resolve the target:
 
 Read the resolved SKILL.md. If it cannot be read, report the error and stop.
 
+If the resolved path exists but is not inside a recognized `skills/` directory (i.e. neither `~/.claude/skills/` nor `.claude/skills/`), warn the user and ask:
+
+```
+This file is not inside a skills/ directory. Proceed anyway?
+(a) Proceed
+(b) Cancel
+```
+
 If a focal point was provided, note it — you will use it in Phase 2 and Phase 3.
 
 ## Phase 2: Analyze
@@ -52,6 +63,7 @@ Analyze the skill against all three documents. Even if the skill looks well-writ
 - `argument-hint` is present when the skill accepts user input via `$ARGUMENTS`
 - `allowed-tools` is minimal — no tools granted that the body never uses; uses Claude Code syntax
 - `when_to_use` is present — enables auto-discovery and skill-search routing; flag as LOW if absent
+- `when_to_use` is a near-paraphrase of `description` — both fields should add unique value; `when_to_use` should describe trigger conditions, `description` should describe what the skill does; flag as LOW if they are largely identical
 - `model` is appropriate for the skill's task — `haiku` for read-only/lookup skills, `inherit` is the default; flag as LOW if a lighter model would suffice but none is set
 - `effort` is set when reasoning depth matters — `high` for analysis or debugging skills; flag as LOW if absent on complex skills
 - `context` matches the interaction pattern — `inline` (default) for skills with confirmation gates; `fork` for self-contained, non-interactive runs; flag as MEDIUM if a heavy workflow uses inline and pollutes context
@@ -131,17 +143,42 @@ How do you want to proceed?
 (e) Cancel
 ```
 
-Wait for the user's response. On (d), ask which items to apply and confirm the selection before proceeding.
+Wait for the user's response. On (d), ask which items to apply. Show a summary of the selected fixes and ask:
+
+```
+Apply these N fix(es)?
+(a) Proceed
+(b) Cancel
+```
+
+Wait for confirmation before proceeding.
 
 ## Phase 5: Apply
 
-If the target skill directory is under version control and has unstaged changes, note this to the user before applying — so they can commit or stash first if they want a clean diff.
+If the target skill directory is under version control and has unstaged changes, show the affected files and ask:
+
+```
+Unstaged changes exist in this skill directory. Proceed anyway?
+(a) Proceed
+(b) Cancel
+```
+
+Wait for the user's reply before applying any edits.
 
 > Note: if you want to undo these edits after applying, use `/rewind` to restore the conversation and file state to before this skill ran.
 
 Apply only the approved fixes. Edit the SKILL.md in place using the Edit tool. Edit existing scripts in place using the Edit tool.
 
+If any Edit call fails (e.g. `old_string` not found), report which fix failed and stop — do not attempt remaining fixes. Instruct the user to use `/rewind` to restore the file to its pre-edit state.
+
 If a script recommendation was approved: run `mkdir -p <skill-directory>/scripts`, write the script to `<skill-directory>/scripts/<name>.sh`, and update `allowed-tools` in the frontmatter to include `Bash(bash:*)`.
+
+**Post-apply verification:**
+Re-read the edited file. For each applied fix, spot-check that the change is present (search for a key string the fix introduced or confirm a removed string is gone). If any fix cannot be verified, append a warning to the summary:
+
+```
+[WARN] Fix "<title>" could not be verified in the re-read file — inspect manually.
+```
 
 After all edits, show a summary:
 

@@ -1,20 +1,19 @@
 ---
 name: skill-create
 description: >
-  Use this skill when you want to create a new agent skill, slash command, or
-  reusable agent capability — even with just a rough idea, a file to extract
-  from, or a URL to base it on. Handles the full creation workflow: clarifying
-  requirements, drafting a SKILL.md following the agentskills.io specification
-  and best practices, and writing the file to disk. Applies agent-specific
-  conventions for Claude Code, OpenCode, Gemini CLI, and Codex. Use even if
-  you haven't decided on the skill name, target agent, or exact scope yet.
+  Create a new agent skill from scratch. Runs a full creation workflow: clarifies
+  requirements, proposes a skill name, drafts a SKILL.md following the
+  agentskills.io specification and best practices, self-audits the draft, and
+  writes it to disk. Supports Claude Code, OpenCode, Gemini CLI, Codex, and
+  universal cross-client skills.
 disable-model-invocation: false
 argument-hint: "short description or URL/file reference for the skill to create"
 allowed-tools: Write Read WebFetch Bash(mkdir:*)
 when_to_use: >
-  Invoke when the user wants to create a new skill, slash command, or reusable
-  agent capability — even with just a rough idea, a file to extract from, or
-  a URL to base it on.
+  Invoke when the user wants a new skill, slash command, or reusable capability
+  — even with just a rough idea, an existing file to extract from, or a URL to
+  base it on. Also use when the user wants to formalize a repeated workflow or
+  extract a pattern into a reusable skill.
 effort: high
 ---
 
@@ -105,6 +104,9 @@ Produce a complete SKILL.md draft in a fenced code block.
 
 **If the skill needs reference files**, plan them out and note them at the bottom of the draft.
 
+**Self-audit before presenting:**
+Before moving to Phase 4, re-read the draft you just produced and verify it against the frontmatter checklist and body checklist above. If any checklist item is violated, fix the draft now — do not present a draft you know violates the checklist. This step is not optional even when the draft "looks good" — systematic verification catches issues that pattern-matching misses.
+
 ## Phase 4: Review
 
 Present the draft, then ask:
@@ -123,15 +125,18 @@ Wait for the user's response. If (b), apply the requested changes, show the upda
 On (a):
 
 1. Determine the install path from Phase 2 (global or project-local) and the confirmed skill name.
-2. Attempt to Read `<skill-directory>/SKILL.md`. If it exists, ask:
+2. Validate the confirmed skill name: it must be kebab-case, 1–64 chars, no consecutive hyphens (`--`), no leading/trailing hyphens. If invalid, warn the user and ask for a corrected name before proceeding.
+3. Attempt to Read `<skill-directory>/SKILL.md`. If it exists, ask:
    ```
    A skill named `<name>` already exists at `<path>`. How do you want to proceed?
    (a) Overwrite it
    (b) Cancel
    ```
    On (b): stop.
-3. Run `mkdir -p <skill-directory>` and, if reference files were planned, `mkdir -p <skill-directory>/references`.
-4. Write `SKILL.md` to `<skill-directory>/SKILL.md`.
-4a. If scripts were planned: run `mkdir -p <skill-directory>/scripts` and write each script to `<skill-directory>/scripts/<name>.sh`.
-5. Write any planned reference files to `<skill-directory>/references/`.
-6. Confirm: "Skill created at `<path>/SKILL.md`."
+4. Run `mkdir -p <skill-directory>` and, if reference files were planned, `mkdir -p <skill-directory>/references`.
+5. Write `SKILL.md` to `<skill-directory>/SKILL.md`.
+5a. If scripts were planned: run `mkdir -p <skill-directory>/scripts` and write each script to `<skill-directory>/scripts/<name>.sh`.
+6. Write any planned reference files to `<skill-directory>/references/`.
+7. Confirm: "Skill created at `<path>/SKILL.md`."
+
+If any Write or Bash call in steps 4–6 fails, report which step failed, list what was already written to disk, and stop. Instruct the user to manually remove any partially written files before retrying.
