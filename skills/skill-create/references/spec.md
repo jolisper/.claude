@@ -28,6 +28,23 @@ All fields are optional except `name` and `description`.
 | `compatibility` | list | agent identifiers this skill targets (e.g. `[claude-code, opencode]`) |
 | `allowed-tools` | string | space-delimited tool names; agent-specific syntax applies |
 
+## Claude Code-specific fields
+
+These fields are supported by Claude Code but are not part of the base agentskills.io spec.
+
+| Field | Type | Rules |
+|---|---|---|
+| `disable-model-invocation` | boolean | `true` = only user can invoke via `/name`; `false` = model may also auto-invoke |
+| `argument-hint` | string | Shown as typeahead placeholder in CLI/IDE when typing `/skill-name` |
+| `user-invocable` | boolean | Whether the skill is callable via `/name` |
+| `when_to_use` | string | Trigger conditions for auto-invocation and skill-search discovery; improves routing |
+| `model` | enum | `sonnet` / `opus` / `haiku` / `inherit` — override the session model for this skill |
+| `effort` | enum | `low` / `medium` / `high` / `max` — override thinking depth |
+| `context` | enum | `inline` (default — shares conversation context) or `fork` (isolated sub-agent) |
+| `paths` | list | Glob patterns; skill auto-surfaces when working context matches (e.g. `["**/SKILL.md"]`) |
+| `skills` | string | Comma-separated skill names preloaded when this skill activates |
+| `hooks` | object | Session-scoped lifecycle hooks (active only while this skill runs, then cleaned up) |
+
 ## Description best practices
 
 - Start with an imperative verb: "Use this skill when…", "Run this skill to…"

@@ -11,6 +11,11 @@ description: >
 disable-model-invocation: false
 argument-hint: "short description or URL/file reference for the skill to create"
 allowed-tools: Write Read WebFetch Bash(mkdir:*)
+when_to_use: >
+  Invoke when the user wants to create a new skill, slash command, or reusable
+  agent capability — even with just a rough idea, a file to extract from, or
+  a URL to base it on.
+effort: high
 ---
 
 ## Phase 1: Intake
@@ -34,15 +39,15 @@ Ask only when genuinely unclear from context:
 3. **Scope** — if the description could mean multiple things, clarify intent.
 4. **Confirmation gates** — does this skill perform destructive or irreversible actions (writes, deletes, pushes)?
 5. **`disable-model-invocation`** — user-only (`true`, default) or also invokable by Claude (`false`)?
-6. **Installation scope** — global (`~/.claude/skills/`), project-local (`.claude/skills/`), or cross-client (`~/.agents/skills/` / `.agents/skills/`)? *(read `~/.claude/skills/skill-create/references/agent-conventions.md` for path details)*
+6. **Installation scope** — global (`~/.claude/skills/`), project-local (`.claude/skills/`), or cross-client (`~/.agents/skills/` / `.agents/skills/`)? *(read `${CLAUDE_SKILL_DIR}/references/agent-conventions.md` for path details)*
 
 Never ask about things that can be confidently inferred from the description or context.
 
 ## Phase 3: Draft
 
-Before drafting frontmatter, read `~/.claude/skills/skill-create/references/spec.md`.
-Before drafting the body, read `~/.claude/skills/skill-create/references/best-practices.md`.
-If the target agent is not Claude Code, also read `~/.claude/skills/skill-create/references/agent-conventions.md`.
+Before drafting frontmatter, read `${CLAUDE_SKILL_DIR}/references/spec.md`.
+Before drafting the body, read `${CLAUDE_SKILL_DIR}/references/best-practices.md`.
+If the target agent is not Claude Code, also read `${CLAUDE_SKILL_DIR}/references/agent-conventions.md`.
 
 If any reference file cannot be read, report which file failed and stop — do not draft without the full spec and best-practices.
 
@@ -50,7 +55,7 @@ Even if the spec and best-practices feel familiar from a previous invocation, st
 
 **Script evaluation:**
 Before drafting, decide whether the skill would benefit from a bundled script.
-Read `~/.claude/skills/skill-create/references/using-scripts.md` if any of these apply:
+Read `${CLAUDE_SKILL_DIR}/references/using-scripts.md` if any of these apply:
 - Commands include complex flag values, format strings, or special characters
 - The workflow chains multiple commands or involves a loop
 - Text processing with patterns derived from user input
@@ -67,6 +72,13 @@ Produce a complete SKILL.md draft in a fenced code block.
 - `argument-hint`: include when the skill accepts a parameter; shown as UI placeholder
 - `allowed-tools`: space-delimited; use Claude Code tool syntax (`Bash(git:*)`, `Read`, `Edit`, etc.) when targeting Claude Code
 - If scripts planned: include `Bash(bash:*)` in `allowed-tools`
+- `when_to_use`: include to enable auto-discovery and skill-search routing
+- `model`: include when the skill should run on a specific model (`haiku` for read-only/lookup skills; omit to inherit the session model)
+- `effort`: include when reasoning depth matters (`low`/`medium`/`high`/`max`; `high` for analysis or drafting skills)
+- `context`: `inline` (default) for interactive skills with confirmation gates; `fork` for isolated, non-interactive runs
+- `paths`: include glob patterns when the skill has a natural file-context trigger (e.g. `**/SKILL.md`)
+- `skills`: include comma-separated skill names to preload when the skill orchestrates other skills
+- `hooks`: include session-scoped lifecycle hooks when pre-flight validation or post-action verification adds value
 - Include `license`, `metadata`, or `compatibility` only when genuinely relevant
 
 **Body checklist (from best-practices):**
@@ -88,7 +100,7 @@ Produce a complete SKILL.md draft in a fenced code block.
 - If scripts planned: use the path form that matches the **installation scope already chosen in Phase 2**:
   - Global (`~/.claude/skills/`) → `~/.claude/skills/<name>/scripts/<script>.sh`
   - Project-local (`.claude/skills/`) → `$(pwd)/.claude/skills/<name>/scripts/<script>.sh`
-  - (See `~/.claude/skills/skill-create/references/using-scripts.md` for the full rationale)
+  - (See `${CLAUDE_SKILL_DIR}/references/using-scripts.md` for the full rationale)
 - If scripts planned: list available scripts in an `## Available scripts` section at the top of the body
 
 **If the skill needs reference files**, plan them out and note them at the bottom of the draft.

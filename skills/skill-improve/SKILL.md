@@ -8,6 +8,11 @@ description: >
 disable-model-invocation: true
 argument-hint: "<skill name or path to SKILL.md> [focal point]"
 allowed-tools: Read Edit Write Glob Bash(mkdir:*)
+when_to_use: >
+  Invoke when the user wants to audit, improve, or fix an existing skill.
+effort: high
+paths:
+  - "**/SKILL.md"
 ---
 
 ## Phase 1: Locate the skill
@@ -32,9 +37,9 @@ If a focal point was provided, note it — you will use it in Phase 2 and Phase 
 
 ## Phase 2: Analyze
 
-Read `~/.claude/skills/skill-improve/references/spec.md`.
-Read `~/.claude/skills/skill-improve/references/best-practices.md`.
-Read `~/.claude/skills/skill-improve/references/using-scripts.md`.
+Read `${CLAUDE_SKILL_DIR}/references/spec.md`.
+Read `${CLAUDE_SKILL_DIR}/references/best-practices.md`.
+Read `${CLAUDE_SKILL_DIR}/references/using-scripts.md`.
 
 If any reference file cannot be read, report which file failed and stop — do not proceed with an incomplete checklist.
 
@@ -46,6 +51,13 @@ Analyze the skill against all three documents. Even if the skill looks well-writ
 - `disable-model-invocation` is present (Claude Code target)
 - `argument-hint` is present when the skill accepts user input via `$ARGUMENTS`
 - `allowed-tools` is minimal — no tools granted that the body never uses; uses Claude Code syntax
+- `when_to_use` is present — enables auto-discovery and skill-search routing; flag as LOW if absent
+- `model` is appropriate for the skill's task — `haiku` for read-only/lookup skills, `inherit` is the default; flag as LOW if a lighter model would suffice but none is set
+- `effort` is set when reasoning depth matters — `high` for analysis or debugging skills; flag as LOW if absent on complex skills
+- `context` matches the interaction pattern — `inline` (default) for skills with confirmation gates; `fork` for self-contained, non-interactive runs; flag as MEDIUM if a heavy workflow uses inline and pollutes context
+- `paths` is declared when the skill has a natural file-context trigger (e.g. `**/SKILL.md`); flag as LOW if absent on file-specific skills
+- `skills` is declared when the body orchestrates other skills (ensures they're preloaded); flag as MEDIUM if body calls sub-skills but `skills` is absent
+- `hooks` are considered when pre-flight validation or post-action verification adds structural value; flag as LOW if a destructive skill has no validation hook
 - No fields present that aren't needed
 
 **Body:**
@@ -124,6 +136,8 @@ Wait for the user's response. On (d), ask which items to apply and confirm the s
 ## Phase 5: Apply
 
 If the target skill directory is under version control and has unstaged changes, note this to the user before applying — so they can commit or stash first if they want a clean diff.
+
+> Note: if you want to undo these edits after applying, use `/rewind` to restore the conversation and file state to before this skill ran.
 
 Apply only the approved fixes. Edit the SKILL.md in place using the Edit tool. Edit existing scripts in place using the Edit tool.
 

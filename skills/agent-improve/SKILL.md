@@ -9,6 +9,12 @@ description: >
 disable-model-invocation: true
 argument-hint: "agent name or path to agent .md file"
 allowed-tools: Read Edit Glob
+when_to_use: >
+  Invoke when the user wants to audit, improve, or fix an existing agent.
+effort: high
+paths:
+  - ".claude/agents/**/*.md"
+  - "agents/**/*.md"
 ---
 
 ## Phase 1: Locate the agent
@@ -26,8 +32,8 @@ Read the resolved agent .md file. If it cannot be read, report the error and sto
 
 ## Phase 2: Analyze
 
-Read `~/.claude/skills/agent-improve/references/spec.md`.
-Read `~/.claude/skills/agent-improve/references/best-practices.md`.
+Read `${CLAUDE_SKILL_DIR}/references/spec.md`.
+Read `${CLAUDE_SKILL_DIR}/references/best-practices.md`.
 
 Analyze the agent file against both documents. Check frontmatter and body separately.
 
@@ -51,8 +57,10 @@ MEDIUM findings (best-practice gaps that reduce reliability or clarity):
 - `description` doesn't start with an imperative verb
 
 LOW findings (minor improvements):
-- `model` not specified (defaults to `inherit` — fine, but explicit is clearer for cost-sensitive agents)
+- `model` not specified for a read-only or low-reasoning agent — `haiku` would reduce cost without quality loss
 - `description` trigger contexts are vague
+- `hooks` absent on an agent that performs destructive actions — a `Stop` hook running a verification pass would catch regressions automatically
+- `permissionMode` not set to `plan` for a purely read-only/analysis agent
 
 **Body** (against `references/best-practices.md`):
 
@@ -111,6 +119,8 @@ How do you want to proceed?
 Wait for the user's response. On (d), ask which items to apply and confirm the selection before proceeding.
 
 ## Phase 5: Apply
+
+> Note: if you want to undo these edits after applying, use `/rewind` to restore the conversation and file state to before this skill ran.
 
 Apply only the approved fixes. Edit the agent .md file in place using the Edit tool.
 
