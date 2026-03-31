@@ -46,45 +46,24 @@ This file is not inside a skills/ directory. Proceed anyway?
 
 If a focal point was provided, note it — you will use it in Phase 2 and Phase 3.
 
+**When NOT to proceed — stop and explain if any of these apply:**
+- The resolved file is empty or contains no YAML frontmatter block
+- The file has no `name` or `description` field (not a valid skill)
+- The skill is the one currently running this audit (circular self-improvement — offer to re-run after the session)
+
 ## Phase 2: Analyze
 
 Read `${CLAUDE_SKILL_DIR}/references/spec.md`.
 Read `${CLAUDE_SKILL_DIR}/references/best-practices.md`.
 Read `${CLAUDE_SKILL_DIR}/references/using-scripts.md`.
+Read `${CLAUDE_SKILL_DIR}/references/frontmatter-checklist.md`.
+Read `${CLAUDE_SKILL_DIR}/references/body-checklist.md`.
 
 If any reference file cannot be read, report which file failed and stop — do not proceed with an incomplete checklist.
 
-Analyze the skill against all three documents. Even if the skill looks well-written at a glance, complete every item in every checklist section — common issues hide in details like allowed-tools minimality, missing $ARGUMENTS gates, and absent failure paths. If a focal point was provided, give it extra scrutiny — look specifically for issues related to that area while still running the full checklist. Check:
+Analyze the skill against all five documents. Even if the skill looks well-written at a glance, complete every item in every checklist section — common issues hide in details like allowed-tools minimality, missing $ARGUMENTS gates, and absent failure paths. If a focal point was provided, give it extra scrutiny — look specifically for issues related to that area while still running the full checklist.
 
-**Frontmatter:**
-- `name` is present, kebab-case, 1–64 chars, no consecutive hyphens, matches the directory name
-- `description` is present, starts with an imperative verb, ≤1024 chars, includes trigger contexts
-- `disable-model-invocation` is present (Claude Code target)
-- `argument-hint` is present when the skill accepts user input via `$ARGUMENTS`
-- `allowed-tools` is minimal — no tools granted that the body never uses; uses Claude Code syntax
-- `when_to_use` is present — enables auto-discovery and skill-search routing; flag as LOW if absent
-- `when_to_use` is a near-paraphrase of `description` — both fields should add unique value; `when_to_use` should describe trigger conditions, `description` should describe what the skill does; flag as LOW if they are largely identical
-- `model` is appropriate for the skill's task — `haiku` for read-only/lookup skills, `inherit` is the default; flag as LOW if a lighter model would suffice but none is set
-- `effort` is set when reasoning depth matters — `high` for analysis or debugging skills; flag as LOW if absent on complex skills
-- `context` matches the interaction pattern — `inline` (default) for skills with confirmation gates; `fork` for self-contained, non-interactive runs; flag as MEDIUM if a heavy workflow uses inline and pollutes context
-- `paths` is declared when the skill has a natural file-context trigger (e.g. `**/SKILL.md`); flag as LOW if absent on file-specific skills
-- `skills` is declared when the body orchestrates other skills (ensures they're preloaded); flag as MEDIUM if body calls sub-skills but `skills` is absent
-- `hooks` are considered when pre-flight validation or post-action verification adds structural value; flag as LOW if a destructive skill has no validation hook
-- No fields present that aren't needed
-
-**Body:**
-- Instructions are stepwise procedures ("do X, then Y"), not declarations ("output should be Z")
-- Destructive or irreversible actions have explicit confirmation gates
-- Menu standard: "How do you want to proceed?" prompts use a lettered `(a)/(b)/...` menu; binary yes/no is expressed as `(a) Proceed / (b) Cancel` — never bare yes/no; item selection from a numbered list may use numeric input; every lettered menu that can abort a workflow includes a Cancel option
-- `$ARGUMENTS` is checked at the start; skill asks for input if empty
-- Large reference material lives in `references/` files, not inline
-- SKILL.md is under 500 lines
-- No documenting what the agent already knows
-- Discipline-enforcing rules include counter-rationalizations for likely skip scenarios
-- Failure paths are specified: error output format, recovery steps, subprocess failure contracts
-- Explicit "when NOT to use / abort" conditions are present for destructive or context-sensitive skills
-- Delegation boundaries explicitly restate tool restrictions and behavioral contracts
-- Shared logic with sibling skills uses the same implementation (no silent divergence)
+Check frontmatter against `references/frontmatter-checklist.md` and body against `references/body-checklist.md`.
 
 **Script evaluation** (using criteria from `references/using-scripts.md`):
 - Does the skill run commands with complex flag values, format strings, or special characters?
