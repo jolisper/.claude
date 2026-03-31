@@ -6,7 +6,7 @@ description: >
   agentskills.io specification and best practices, self-audits the draft, and
   writes it to disk. Supports Claude Code, OpenCode, Gemini CLI, Codex, and
   universal cross-client skills.
-disable-model-invocation: false
+disable-model-invocation: true
 argument-hint: "short description or URL/file reference for the skill to create"
 allowed-tools: Write Read WebFetch Bash(mkdir:*)
 when_to_use: >
