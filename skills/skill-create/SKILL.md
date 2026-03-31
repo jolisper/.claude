@@ -44,13 +44,17 @@ Never ask about things that can be confidently inferred from the description or 
 
 ## Phase 3: Draft
 
-Before drafting frontmatter, read `${CLAUDE_SKILL_DIR}/references/spec.md`.
-Before drafting the body, read `${CLAUDE_SKILL_DIR}/references/best-practices.md`.
+Before drafting, read all reference files:
+- `${CLAUDE_SKILL_DIR}/references/spec.md`
+- `${CLAUDE_SKILL_DIR}/references/best-practices.md`
+- `${CLAUDE_SKILL_DIR}/references/frontmatter-checklist.md`
+- `${CLAUDE_SKILL_DIR}/references/body-checklist.md`
+
 If the target agent is not Claude Code, also read `${CLAUDE_SKILL_DIR}/references/agent-conventions.md`.
 
 If any reference file cannot be read, report which file failed and stop — do not draft without the full spec and best-practices.
 
-Even if the spec and best-practices feel familiar from a previous invocation, still read both reference files before drafting — the body checklist depends on their current content, which may have changed.
+Even if these feel familiar from a previous invocation, still read all reference files before drafting — the checklists depend on their current content, which may have changed.
 
 **Script evaluation:**
 Before drafting, decide whether the skill would benefit from a bundled script.
@@ -64,48 +68,14 @@ If scripts are warranted, plan the script file(s) now and note them before the d
 
 Produce a complete SKILL.md draft in a fenced code block.
 
-**Frontmatter checklist:**
-- `name`: kebab-case, 1–64 chars, no consecutive hyphens, matches the directory name
-- `description`: imperative voice, user-intent focused, explicit trigger contexts, ≤1024 chars
-- `disable-model-invocation`: always include when targeting Claude Code
-- `argument-hint`: include when the skill accepts a parameter; shown as UI placeholder
-- `allowed-tools`: space-delimited; use Claude Code tool syntax (`Bash(git:*)`, `Read`, `Edit`, etc.) when targeting Claude Code
-- If scripts planned: include `Bash(bash:*)` in `allowed-tools`
-- `when_to_use`: include to enable auto-discovery and skill-search routing
-- `model`: include when the skill should run on a specific model (`haiku` for read-only/lookup skills; omit to inherit the session model)
-- `effort`: include when reasoning depth matters (`low`/`medium`/`high`/`max`; `high` for analysis or drafting skills)
-- `context`: `inline` (default) for interactive skills with confirmation gates; `fork` for isolated, non-interactive runs
-- `paths`: include glob patterns when the skill has a natural file-context trigger (e.g. `**/SKILL.md`)
-- `skills`: include comma-separated skill names to preload when the skill orchestrates other skills
-- `hooks`: include session-scoped lifecycle hooks when pre-flight validation or post-action verification adds value
-- Include `license`, `metadata`, or `compatibility` only when genuinely relevant
+Apply the frontmatter checklist from `${CLAUDE_SKILL_DIR}/references/frontmatter-checklist.md`.
 
-**Body checklist (from best-practices):**
-- Stepwise procedures ("do X, then Y") not declarations ("the output should be Z")
-- Match prescriptiveness to reversibility: be strict for destructive ops, flexible elsewhere
-- Use `$ARGUMENTS` to reference the user-supplied parameter (Claude Code)
-- Include confirmation gates before destructive actions
-- Avoid compound Bash expressions (`&&`, `||`, pipes) in skill steps — they trigger approval prompts and interrupt flow; use separate Bash calls instead
-- Follow the menu standard: "How do you want to proceed?" prompts use a lettered `(a)/(b)/...` menu; binary yes/no is expressed as `(a) Proceed / (b) Cancel` — never bare yes/no; item selection from a numbered list may use numeric input; every lettered menu that can abort a workflow includes a Cancel option
-- Provide defaults, not menus — pick one approach and note alternatives briefly
-- Inline output templates only when format consistency matters
-- Keep SKILL.md under 500 lines; use `references/` files for large reference material
-- Add only what the agent lacks; omit what it already knows
-- For discipline-enforcing rules, include counter-rationalizations ("even when X, still do Y")
-- Specify failure paths: error output format, recovery steps, subprocess failure contracts
-- Include an explicit "when NOT to use / when to abort" section for destructive or context-sensitive skills
-- When delegating to another skill or subprocess, explicitly restate tool restrictions and behavioral contracts at the boundary
-- If logic overlaps with an existing sibling skill, reuse the same implementation pattern
-- If scripts planned: use the path form that matches the **installation scope already chosen in Phase 2**:
-  - Global (`~/.claude/skills/`) → `~/.claude/skills/<name>/scripts/<script>.sh`
-  - Project-local (`.claude/skills/`) → `$(pwd)/.claude/skills/<name>/scripts/<script>.sh`
-  - (See `${CLAUDE_SKILL_DIR}/references/using-scripts.md` for the full rationale)
-- If scripts planned: list available scripts in an `## Available scripts` section at the top of the body
+Apply the body checklist from `${CLAUDE_SKILL_DIR}/references/body-checklist.md`.
 
 **If the skill needs reference files**, plan them out and note them at the bottom of the draft.
 
 **Self-audit before presenting:**
-Before moving to Phase 4, re-read the draft you just produced and verify it against the frontmatter checklist and body checklist above. If any checklist item is violated, fix the draft now — do not present a draft you know violates the checklist. This step is not optional even when the draft "looks good" — systematic verification catches issues that pattern-matching misses.
+Before moving to Phase 4, re-read the draft you just produced and verify it against `${CLAUDE_SKILL_DIR}/references/frontmatter-checklist.md` and `${CLAUDE_SKILL_DIR}/references/body-checklist.md`. If any checklist item is violated, fix the draft now — do not present a draft you know violates the checklist. This step is not optional even when the draft "looks good" — systematic verification catches issues that pattern-matching misses.
 
 ## Phase 4: Review
 
