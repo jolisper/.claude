@@ -5,10 +5,7 @@
 !.gitignore
 !CLAUDE.md
 !README.md
-!statusline.conf
-!statusline-command.sh
 !settings.template.json
-statusline.local.conf
 
 # Allowlist directories and their contents
 !agents/
@@ -19,9 +16,15 @@ statusline.local.conf
 !commands/**
 !scripts/
 !scripts/**
+!statusline/
+!statusline/**
+
+# Re-ignore local overrides within statusline/
+statusline/statusline.local.conf
 
 !docs/
 !docs/**
 
 # Re-ignore personal/generated files within allowed dirs
 agents/*.bak
+

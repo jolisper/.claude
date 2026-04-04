@@ -196,17 +196,43 @@ if [ "$rate_limits" = "on" ]; then
   fi
 fi
 
-# Cache hit ratio — always computed when either cache_pct display or coherence_warning is on
+# Cache hit ratio — computed for both Claude.ai and Ollama
 cache_pct_val=0
 cache_pct_str=""
 if [ "$cache_pct" = "on" ] || [ "$coherence_warning" = "on" ]; then
-  cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
-  cache_create=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
-  cache_input=$(echo "$input" | jq -r '.context_window.current_usage.input_tokens // 0')
-  cache_total=$(( cache_read + cache_create + cache_input ))
-  if [ "$cache_total" -gt 0 ]; then
-    cache_pct_val=$(awk "BEGIN {printf \"%.0f\", $cache_read * 100 / $cache_total}")
-    [ "$cache_pct" = "on" ] && cache_pct_str="(${cache_pct_val}%)"
+  # Detect Ollama models
+  is_ollama=false
+  configured_model=$(echo "$input" | jq -r '.model // ""')
+  # Fall back to settings.json if not in input JSON
+  if [ -z "$configured_model" ]; then
+    [ -f "$cwd/.claude/settings.json" ] && configured_model=$(jq -r '.model // ""' "$cwd/.claude/settings.json")
+    [ -z "$configured_model" ] && [ -f "$HOME/.claude/settings.json" ] && configured_model=$(jq -r '.model // ""' "$HOME/.claude/settings.json")
+  fi
+  case "$configured_model" in
+    ollama/*|qwen*|llama*|gpt-oss*|glm*|deepseek*)
+      is_ollama=true
+        ;;
+  esac
+  # Fallback: no rate_limits in JSON → not a Claude.ai session
+  if [ "$is_ollama" = "false" ]; then
+    has_rate_limits=$(echo "$input" | jq -r 'has("rate_limits")')
+    [ "$has_rate_limits" = "false" ] && is_ollama=true
+  fi
+
+  if [ "$is_ollama" = "true" ]; then
+    cache_pct_val=$(sh "$HOME/.claude/statusline/ollama-cache.sh")
+    cache_pct_val=${cache_pct_val:-0}
+    [ "$cache_pct" = "on" ] && [ "$cache_pct_val" -gt 0 ] && cache_pct_str="(${cache_pct_val}%)"
+  else
+     # Claude.ai: use context_window.current_usage fields
+    cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
+    cache_create=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
+    cache_input=$(echo "$input" | jq -r '.context_window.current_usage.input_tokens // 0')
+    cache_total=$(( cache_read + cache_create + cache_input ))
+    if [ "$cache_total" -gt 0 ]; then
+      cache_pct_val=$(awk "BEGIN {printf \"%.0f\", $cache_read * 100 / $cache_total}")
+       [ "$cache_pct" = "on" ] && cache_pct_str="(${cache_pct_val}%)"
+    fi
   fi
 fi
 
