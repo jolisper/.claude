@@ -17,11 +17,11 @@ rate_limits=on; sess_duration=on; wall_time=on; api_duration=off
 think_pct=off; lines=off; cost=off; time=on
 
 # Shared config (tracked in git)
-conf="$HOME/.claude/statusline.conf"
+conf="$HOME/.claude/statusline/statusline.conf"
 [ -f "$conf" ] && . "$conf"
 
 # Local overrides (not tracked by git)
-local_conf="$HOME/.claude/statusline.local.conf"
+local_conf="$HOME/.claude/statusline/statusline.local.conf"
 [ -f "$local_conf" ] && . "$local_conf"
 
 # Git branch + dirty flag + diff stats
