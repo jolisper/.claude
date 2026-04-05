@@ -8,12 +8,7 @@ input=$(cat 2>/dev/null)
 # Try input JSON first
 configured_model=""
 if echo "$input" | jq -e . >/dev/null 2>&1; then
-  model_type=$(echo "$input" | jq -r '.model | type')
-  if [ "$model_type" = "object" ]; then
-    configured_model=$(echo "$input" | jq -r '.model.display_name // .model.id // ""')
-  elif [ "$model_type" = "string" ]; then
-    configured_model=$(echo "$input" | jq -r '.model')
-  fi
+  configured_model=$(echo "$input" | jq -r '.model.display_name // .model // ""')
 fi
 
 # Fallback to cwd settings.json
