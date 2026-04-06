@@ -196,35 +196,30 @@ if [ "$rate_limits" = "on" ]; then
   fi
 fi
 
-# Cache hit ratio — computed for both Claude.ai and Ollama
+# Provider detection: cloud (Anthropic) vs local (Ollama/third-party)
+# ANTHROPIC_BASE_URL points to a local network address → local mode; unset or remote → cloud
+is_local=false
+if [ -n "$ANTHROPIC_BASE_URL" ]; then
+  _host=$(echo "$ANTHROPIC_BASE_URL" | sed 's|^[a-z]*://||; s|[:/].*||')
+  case "$_host" in
+    localhost|127.*|0.0.0.0|\[::1\])        is_local=true ;;  # loopback
+    10.*|192.168.*)                           is_local=true ;;  # RFC 1918
+    172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) is_local=true ;;  # RFC 1918
+    169.254.*|\[fe80:*\])                     is_local=true ;;  # link-local
+    *.local)                                  is_local=true ;;  # mDNS
+  esac
+fi
+
+# Cache hit ratio — computed for both Claude.ai and local
 cache_pct_val=0
 cache_pct_str=""
 if [ "$cache_pct" = "on" ] || [ "$coherence_warning" = "on" ]; then
-  # Detect Ollama models
-  is_ollama=false
-  configured_model=$(echo "$input" | jq -r '.model // ""')
-  # Fall back to settings.json if not in input JSON
-  if [ -z "$configured_model" ]; then
-    [ -f "$cwd/.claude/settings.json" ] && configured_model=$(jq -r '.model // ""' "$cwd/.claude/settings.json")
-    [ -z "$configured_model" ] && [ -f "$HOME/.claude/settings.json" ] && configured_model=$(jq -r '.model // ""' "$HOME/.claude/settings.json")
-  fi
-  case "$configured_model" in
-    ollama/*|qwen*|llama*|gpt-oss*|glm*|deepseek*)
-      is_ollama=true
-        ;;
-  esac
-  # Fallback: no rate_limits in JSON → not a Claude.ai session
-  if [ "$is_ollama" = "false" ]; then
-    has_rate_limits=$(echo "$input" | jq -r 'has("rate_limits")')
-    [ "$has_rate_limits" = "false" ] && is_ollama=true
-  fi
-
-  if [ "$is_ollama" = "true" ]; then
+  if [ "$is_local" = "true" ]; then
     cache_pct_val=$(sh "$HOME/.claude/statusline/ollama-cache.sh")
     cache_pct_val=${cache_pct_val:-0}
     [ "$cache_pct" = "on" ] && [ "$cache_pct_val" -gt 0 ] && cache_pct_str="(${cache_pct_val}%)"
   else
-     # Claude.ai: use context_window.current_usage fields
+    # Cloud: use context_window.current_usage fields
     cache_read=$(echo "$input" | jq -r '.context_window.current_usage.cache_read_input_tokens // 0')
     cache_create=$(echo "$input" | jq -r '.context_window.current_usage.cache_creation_input_tokens // 0')
     cache_input=$(echo "$input" | jq -r '.context_window.current_usage.input_tokens // 0')
@@ -236,18 +231,21 @@ if [ "$cache_pct" = "on" ] || [ "$coherence_warning" = "on" ]; then
   fi
 fi
 
-# Model label — only shown when a non-default model is configured
+# Model label — ^prefix for cloud, ~prefix for local
 model_label_str=""
 if [ "$model" = "on" ]; then
-  configured_model=""
-  if [ -f "$cwd/.claude/settings.json" ]; then
-    configured_model=$(jq -r '.model // ""' "$cwd/.claude/settings.json")
-  fi
-  if [ -z "$configured_model" ] && [ -f "$HOME/.claude/settings.json" ]; then
-    configured_model=$(jq -r '.model // ""' "$HOME/.claude/settings.json")
-  fi
-  if [ -n "$configured_model" ]; then
-    model_label_str="[$configured_model] "
+  if [ "$is_local" = "true" ]; then
+    # Local: show model from input JSON (actual running model)
+    _model=$(echo "$input" | jq -r '.model.id? // .model.display_name? // .model // ""')
+    [ -n "$_model" ] && model_label_str="[~${_model}] "
+  else
+    # Cloud: project local → project shared → user global (where /model writes); fallback to "default"
+    _model=""
+    [ -f "$cwd/.claude/settings.local.json" ] && _model=$(jq -r '.model // ""' "$cwd/.claude/settings.local.json" 2>/dev/null)
+    [ -z "$_model" ] && [ -f "$cwd/.claude/settings.json" ] && _model=$(jq -r '.model // ""' "$cwd/.claude/settings.json" 2>/dev/null)
+    [ -z "$_model" ] && [ -f "$HOME/.claude/settings.json" ] && _model=$(jq -r '.model // ""' "$HOME/.claude/settings.json" 2>/dev/null)
+    [ -z "$_model" ] && _model="default"
+    model_label_str="[^${_model}] "
   fi
 fi
 
