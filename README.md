@@ -72,13 +72,13 @@ A custom status line rendered by `statusline-command.sh`. Wired up via `settings
 
 ---
 
-Format: `dirname (branch*? +N/-N) | [model] ▓▓░░ ctx% (cache%) | rate_5h%(reset) rate_7d%(reset) | ~sess wall (api think%)`
+Format: `dirname (branch*? +N/-N) | [^model] ▓▓░░ ctx% (cache%) | rate_5h%(reset) rate_7d%(reset) | ~sess wall (api think%)`
 
 | Segment | Default | Description |
 |---|---|---|
 | `time` | off | Current time (`HH:MM`) |
 | `branch` | on | Git branch + dirty flag (`*`) + diff stats (`+N/-N`) |
-| `model` | on | Active model in brackets (hidden when default) |
+| `model` | on | Active model in brackets with cloud/local indicator (`^` = cloud) |
 | `ctx_bar` | on | Color-coded progress bar + context % used |
 | `cache_pct` | on | Cache hit ratio in parentheses |
 | `coherence_warning` | on | Blinking red dot when context > 50% and cache < 20% |
