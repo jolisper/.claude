@@ -1,5 +1,5 @@
 ---
-name: tdd
+name: tdd-cycle
 description: >
   Run a TDD red-green-refactor loop. Accepts an initial problem description,
   then asks the user for each behavior to test one at a time. Drives the red
@@ -15,7 +15,7 @@ Run a red → green → refactor loop, one behavior at a time.
 
 ## Setup
 
-The user invokes this skill with an initial problem description (e.g. `/tdd build a shopping cart`). Capture this as the **session context** — it describes what is being built. Every agent invocation in this session receives this context so agents understand the broader goal.
+The user invokes this skill with an initial problem description (e.g. `/tdd-cycle build a shopping cart`). Capture this as the **session context** — it describes what is being built. Every agent invocation in this session receives this context so agents understand the broader goal.
 
 If no description was provided, ask for one before proceeding:
 
