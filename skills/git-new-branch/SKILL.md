@@ -12,6 +12,8 @@ argument-hint: "feat/branch-description"
 allowed-tools: Bash(git:*)
 ---
 
+**Important**: Never use `cd`, `git -C`, `&&`, or `||`. Run each command separately with no path arguments — rely on the shell's current working directory.
+
 Update main/master and create a new branch from it. Branch names follow the Conventional Branch spec: `<type>/<description>`.
 
 ## Phase 1 — Resolve branch name

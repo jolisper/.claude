@@ -11,6 +11,8 @@ disable-model-invocation: true
 allowed-tools: Agent Bash(bash:*) Write
 ---
 
+**Important**: Never use `cd`, `git -C`, `&&`, or `||`. Run each command separately with no path arguments — rely on the shell's current working directory.
+
 ## Abort early if
 
 - The current branch is `main`, `master`, `develop`, or `trunk` — these are shared branches.

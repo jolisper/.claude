@@ -9,6 +9,8 @@ disable-model-invocation: true
 allowed-tools: Read Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Bash(git rev-parse:*) Bash(git push:*) Bash(git fetch:*) Bash(bash ~/.claude/skills/git-push/scripts/:*)
 ---
 
+**Important**: Never use `cd`, `git -C`, `&&`, or `||`. Run each command separately with no path arguments — rely on the shell's current working directory.
+
 Stage changes, commit them with a Conventional Commits message, then push to the remote.
 
 This skill delegates to `git-commit` and `git-push` at runtime by reading their SKILL.md files.

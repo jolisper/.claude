@@ -5,7 +5,7 @@ disable-model-invocation: false
 allowed-tools: Bash(git diff:*) Bash(git status:*) Read Grep
 ---
 
-**Rule: run every command as a single, standalone call. Never use `&&`, `;`, pipes, or compound expressions. One command per tool call.**
+**Rule: run every command as a single, standalone call. Never use `cd`, `git -C`, `&&`, `;`, pipes, or compound expressions. One command per tool call. Rely on the shell's current working directory — no path arguments.**
 
 ## Step 1 — Collect changes
 
