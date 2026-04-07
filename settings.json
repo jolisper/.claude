@@ -1,0 +1,60 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m json.tool)",
+      "Bash(sh /home/jolisper/.claude/statusline/command.sh)",
+      "Bash(sh -x /home/jolisper/.claude/statusline/command.sh)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git log:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(item[''''path'''']\\) for item in data.get\\(''''tree'''',[]\\) if item[''''type''''] in \\(''''blob'''',''''tree''''\\)]\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 -c \"import sys,json; [print\\(d[''''name'''']\\) for d in json.load\\(sys.stdin\\)]\")",
+      "Bash(for skill:*)",
+      "Bash(do echo:*)",
+      "Bash(python3 -c \"import sys,json,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d[''''content'''']\\).decode\\(\\)[:400]\\)\" echo done)",
+      "Bash(python3 -c \"import sys,json,base64; d=json.load\\(sys.stdin\\); print\\(base64.b64decode\\(d[''''content'''']\\).decode\\(\\)[:300]\\)\" echo done)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(item[''''path'''']\\) for item in data.get\\(''''tree'''',[]\\) if item[''''type'''']==''''tree'''' and item[''''path''''].count\\(''''/''''\\)==1 and item[''''path''''].startswith\\(''''skills/''''\\)]\")",
+      "Bash(do)",
+      "Bash(echo \"=== $skill ===\")",
+      "Read(//home/jolisper/.claude/skills/$skill/**)",
+      "Bash(done)",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(item[''''path'''']\\) for item in data.get\\(''''tree'''',[]\\)]\")",
+      "Bash(for f:*)",
+      "Read(//home/jolisper/.claude/**)",
+      "Bash(curl:*)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d[''''name'''']\\) for d in data if isinstance\\(data,list\\)]\")",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d[''''name''''], d.get\\(''''download_url'''',''''''''\\)\\) for d in data if isinstance\\(data,list\\)]\")"
+    ],
+    "deny": [
+      "Read(/home/jolisper/.ssh/**)",
+      "Read(/home/jolisper/.gnupg/**)",
+      "Read(/home/jolisper/.config/**)",
+      "Bash(cat /home/jolisper/.ssh/**)",
+      "Bash(cat /home/jolisper/.gnupg/**)",
+      "Bash(cat /home/jolisper/.config/**)"
+    ]
+  },
+  "model": "opusplan",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); sid=$(echo \"$input\" | jq -r '.session_id'); test -f \"/tmp/claude-session-start-$sid\" || date +%s > \"/tmp/claude-session-start-$sid\""
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "sh ~/.claude/statusline/command.sh"
+  },
+  "skipDangerousModePermissionPrompt": true
+}
