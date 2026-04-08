@@ -4,7 +4,9 @@ description: >
   Autonomous TDD session: finds the middle of the problem, then drives
   red-green-refactor cycles one at a time — deciding the next minimal behavior
   at each step — until the goal is fully implemented.
-argument-hint: "<problem description>"
+disable-model-invocation: false
+when_to_use: "When you want autonomous TDD-driven implementation with red-green-refactor cycles"
+argument-hint: "<goal or spec file path>"
 ---
 
 # TDD Session
@@ -28,7 +30,7 @@ Violations of these constraints break the TDD session. There are no exceptions.
 
 Capture the problem description from `$ARGUMENTS`:
 
-- If `$ARGUMENTS` is empty, ask the user for the problem description before continuing.
+- If `$ARGUMENTS` is empty or whitespace-only, ask the user for the problem description and stop.
 - If `$ARGUMENTS` looks like a file path (contains `/` or `.` with a known extension such as `.md`, `.txt`, `.spec`, `.feature`, or similar), use the `Read` tool to read it. Use the file contents as the problem description. If the file does not exist, tell the user and ask for a description instead.
 - Otherwise, use `$ARGUMENTS` as the problem description directly.
 
@@ -89,6 +91,8 @@ Print before starting:
 
 **Wait for the agent to complete.** Do not proceed to Green until Red has finished and returned its result. Do not write the test yourself — the agent does that.
 
+If the agent invocation fails, report the error to the user and stop — do not proceed to the next cycle.
+
 Capture: test file, test name.
 
 ### 3c — Green
@@ -97,6 +101,8 @@ Capture: test file, test name.
 
 **Wait for the agent to complete.** Do not proceed to Refactor until Green has finished and returned its result. Do not write the implementation yourself — the agent does that.
 
+If the agent invocation fails, report the error to the user and stop — do not proceed to the next cycle.
+
 Capture: implementation files changed.
 
 ### 3d — Refactor
@@ -104,6 +110,8 @@ Capture: implementation files changed.
 **Invoke the `tdd-refactor` agent using the `Agent` tool.** `subagent_type: "tdd-refactor"`. Pass: session context + all accumulated implementation files (every cycle so far).
 
 **Wait for the agent to complete.** Do not proceed to the next cycle until Refactor has finished and returned its result. Do not refactor the code yourself — the agent does that.
+
+If the agent invocation fails, report the error to the user and stop — do not proceed to the next cycle.
 
 ### 3e — Log and evaluate
 
@@ -117,9 +125,16 @@ Print cycle summary:
 Cycle: <N>
 ```
 
-Assess whether the goal is fully implemented. If unclear after 5+ cycles, ask the user via AskUserQuestion.
+Assess whether the goal is fully implemented. Even if the goal seems simple, if you reach 5+ cycles without completion, ask the user — single-cycle assumptions often hide complexity. If unclear after 5+ cycles, ask the user via AskUserQuestion.
 
 ---
+
+## When NOT to use this skill
+
+Abort and ask the user if:
+- The project has no test framework configured
+- The goal is ambiguous or underspecified
+- More than 10 cycles would be needed (indicates the scope is too large)
 
 ## Step 4 — Close
 
