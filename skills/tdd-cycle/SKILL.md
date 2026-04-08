@@ -17,9 +17,12 @@ Run a red → green → refactor loop, one behavior at a time.
 
 The user invokes this skill with an initial problem description (e.g. `/tdd-cycle build a shopping cart`). Capture this as the **session context** — it describes what is being built. Every agent invocation in this session receives this context so agents understand the broader goal.
 
-If no description was provided, ask for one before proceeding:
+Resolve `$ARGUMENTS` to the session context:
 
-> What are you building? Give a brief description of the problem to solve.
+- If `$ARGUMENTS` is empty, ask for a description before proceeding:
+  > What are you building? Give a brief description of the problem to solve.
+- If `$ARGUMENTS` looks like a file path (contains `/` or `.` with a known extension such as `.md`, `.txt`, `.spec`, `.feature`, or similar), use the `Read` tool to read it. Use the file contents as the session context. If the file does not exist, tell the user and ask for a description instead.
+- Otherwise, use `$ARGUMENTS` as the session context directly.
 
 ## Loop
 

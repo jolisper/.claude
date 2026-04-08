@@ -26,7 +26,11 @@ Violations of these constraints break the TDD session. There are no exceptions.
 
 ## Setup
 
-Capture the problem description from `$ARGUMENTS`. If empty, ask the user before continuing.
+Capture the problem description from `$ARGUMENTS`:
+
+- If `$ARGUMENTS` is empty, ask the user for the problem description before continuing.
+- If `$ARGUMENTS` looks like a file path (contains `/` or `.` with a known extension such as `.md`, `.txt`, `.spec`, `.feature`, or similar), use the `Read` tool to read it. Use the file contents as the problem description. If the file does not exist, tell the user and ask for a description instead.
+- Otherwise, use `$ARGUMENTS` as the problem description directly.
 
 ---
 
