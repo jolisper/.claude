@@ -31,12 +31,17 @@
       "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(d[''''name''''], d.get\\(''''download_url'''',''''''''\\)\\) for d in data if isinstance\\(data,list\\)]\")"
     ],
     "deny": [
-      "Read(/home/jolisper/.ssh/**)",
-      "Read(/home/jolisper/.gnupg/**)",
-      "Read(/home/jolisper/.config/**)",
-      "Bash(cat /home/jolisper/.ssh/**)",
-      "Bash(cat /home/jolisper/.gnupg/**)",
-      "Bash(cat /home/jolisper/.config/**)"
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.netrc/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.git-credentials/**)",
+      "Read(~/.config/**)",
+      "Bash(cat ~/.ssh/**)",
+      "Bash(cat ~/.gnupg/**)",
+      "Bash(cat ~/.netrc/**)",
+      "Bash(cat ~/.aws/**)",
+      "Bash(cat ~/.config/**)"
     ]
   },
   "model": "opusplan",
@@ -55,6 +60,5 @@
   "statusLine": {
     "type": "command",
     "command": "sh ~/.claude/statusline/command.sh"
-  },
-  "skipDangerousModePermissionPrompt": true
+  }
 }
