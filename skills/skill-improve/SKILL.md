@@ -87,7 +87,9 @@ Also verify the SKILL.md references scripts using the correct path form for the 
 
 ## Phase 3: Report
 
-If a focal point was provided, open the report with a short paragraph (2–3 sentences) summarising what you found specifically in that area — even if the finding is "no issues in this area." Then present all findings using this format:
+**Before reporting any finding, verify it against the actual file content.** If a field is present in the frontmatter, do not flag it as missing. If a step is present in the body, do not flag it as absent. Only report what you can confirm is actually wrong.
+
+If a focal point was provided, open the report with a short paragraph (2–3 sentences) summarising what you found specifically in that area — even if the finding is "no issues in this area." Then present all findings using **exactly** this format — no variations:
 
 ```
 [HIGH]   <area> — <short title>
@@ -103,6 +105,30 @@ If a focal point was provided, open the report with a short paragraph (2–3 sen
          Fix: <concrete change to make>
 ```
 
+Example of correct output (do not copy these findings — they are illustrative only):
+
+```
+[HIGH]   frontmatter — allowed-tools uses JSON array syntax
+         Problem: allowed-tools is ["Read", "Grep"] — spec requires a space-delimited string.
+         Fix: change to allowed-tools: Read Grep
+
+[MEDIUM] body — failure path missing for script error in Step 2
+         Problem: if sdk.sh exits non-zero, the body has no handling — it proceeds as if the output is valid.
+         Fix: add "If the script exits non-zero, report the error and stop."
+
+[LOW]    frontmatter — when_to_use absent
+         Problem: auto-discovery and skill-search routing rely on this field.
+         Fix: add a when_to_use field with the trigger conditions.
+```
+
+Rules:
+- Use `[HIGH]`, `[MEDIUM]`, or `[LOW]` — no other severity labels
+- Use ` — ` (space-dash-space) between area and title
+- Indent `Problem:` and `Fix:` by 9 spaces to align under the title
+- Do not add a Summary section, section headings, bold headers, or any structure outside the finding blocks
+- Do not number the findings
+
+Severity guide:
 - **HIGH** — spec violations (missing required fields, wrong types, format errors)
 - **MEDIUM** — best-practice gaps that reduce reliability or clarity; script recommendations and script best-practice violations fall here
 - **LOW** — minor improvements (wording, optional fields, housekeeping)
