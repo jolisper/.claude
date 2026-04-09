@@ -17,7 +17,7 @@ This skill delegates to `git-commit` and `git-push` at runtime by reading their 
 
 ## Pre-flight
 
-Before starting, run `git rev-parse --abbrev-ref --symbolic-full-name @{u}`. If the command fails (no upstream set), warn the user and stop — do not begin committing work that cannot be pushed.
+Before starting, run `git rev-parse --abbrev-ref --symbolic-full-name @{u}`. If the command fails (no upstream set), get the current branch name with `git rev-parse --abbrev-ref HEAD`, then propose: "No upstream configured. I'll push with `git push -u origin <branch>` to create it — proceed?" and wait for explicit confirmation. If the user declines, stop.
 
 ---
 

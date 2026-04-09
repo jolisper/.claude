@@ -22,8 +22,8 @@ Run each of these commands separately:
 ## Step 2 — Handle missing upstream
 
 If the upstream is not set:
-- Suggest: `git push -u origin <branch>` (using the current branch name).
-- Ask the user to confirm before proceeding.
+- Propose: "No upstream configured. I'll push with `git push -u origin <branch>` to create it — proceed?"
+- Wait for explicit confirmation before continuing.
 - After confirmation, proceed to Step 4.
 
 ## Step 3 — Detect divergence
