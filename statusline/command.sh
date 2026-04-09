@@ -197,18 +197,7 @@ if [ "$rate_limits" = "on" ]; then
 fi
 
 # Provider detection: cloud (Anthropic) vs local (Ollama/third-party)
-# ANTHROPIC_BASE_URL points to a local network address → local mode; unset or remote → cloud
-is_local=false
-if [ -n "$ANTHROPIC_BASE_URL" ]; then
-  _host=$(echo "$ANTHROPIC_BASE_URL" | sed 's|^[a-z]*://||; s|[:/].*||')
-  case "$_host" in
-    localhost|127.*|0.0.0.0|\[::1\])        is_local=true ;;  # loopback
-    10.*|192.168.*)                           is_local=true ;;  # RFC 1918
-    172.1[6-9].*|172.2[0-9].*|172.3[0-1].*) is_local=true ;;  # RFC 1918
-    169.254.*|\[fe80:*\])                     is_local=true ;;  # link-local
-    *.local)                                  is_local=true ;;  # mDNS
-  esac
-fi
+is_local=$(sh "$HOME/.claude/statusline/is-local-mode.sh")
 
 # Cache hit ratio — computed for both Claude.ai and local
 cache_pct_val=0
