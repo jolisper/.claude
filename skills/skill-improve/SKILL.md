@@ -6,7 +6,6 @@ description: >
   prioritized list of HIGH/MEDIUM/LOW findings, and applies fixes with your
   approval. Accepts a skill name (e.g. "git-log") or a direct path to a SKILL.md
   file.
-disable-model-invocation: true
 argument-hint: "<skill name or path to SKILL.md> [focal point]"
 allowed-tools: Read Edit Write Glob Bash(mkdir:*)
 when_to_use: >
