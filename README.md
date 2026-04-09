@@ -28,6 +28,13 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `/try` | Investigate a solution in an isolated worktree | no |
 | `/recap` | Print a concise session recap | yes |
 
+### TDD
+
+| Skill | What it does | Model-invocable |
+|---|---|---|
+| `/tdd-session` | Autonomous TDD session: drives red-green-refactor cycles until the goal is fully implemented; accepts an optional spec file as input | no |
+| `/tdd-cycle` | Single red-green-refactor loop: asks for the next behavior to test, drives the cycle, then stops | no |
+
 ### Meta
 
 | Skill | What it does | Model-invocable |
@@ -35,6 +42,9 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `/skill-create` | Scaffold a new skill from scratch | no |
 | `/skill-improve` | Audit and improve an existing skill | no |
 | `/agent-improve` | Audit and improve an existing agent | no |
+| `/memory-list` | List all auto-memory entries for the current project | no |
+| `/memory-manage` | Review, edit, remove, or archive memory entries | no |
+| `/memory-archive` | Inspect and restore/remove orphaned memory files | no |
 
 **Model-invocable: yes** — Claude can invoke the skill automatically when context matches.
 **Model-invocable: no** — skill only runs when you explicitly type `/skill-name`.
@@ -78,7 +88,7 @@ Format: `dirname (branch*? +N/-N) | [^model] ▓▓░░ ctx% (cache%) | rate_5
 |---|---|---|
 | `time` | off | Current time (`HH:MM`) |
 | `branch` | on | Git branch + dirty flag (`*`) + diff stats (`+N/-N`) |
-| `model` | on | Active model in brackets with cloud/local indicator (`^` = cloud) |
+| `model` | on | Active model in brackets with cloud/local indicator (`^` = cloud, `~` = local/Ollama) |
 | `ctx_bar` | on | Color-coded progress bar + context % used |
 | `cache_pct` | on | Cache hit ratio in parentheses |
 | `coherence_warning` | on | Blinking red dot when context > 50% and cache < 20% |
