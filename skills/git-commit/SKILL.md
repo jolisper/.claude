@@ -7,11 +7,16 @@ description: >
   Conventional Commits message, and confirms before committing.
 disable-model-invocation: true
 allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
+argument-hint: "[--auto]"
 ---
 
 Stage changes and commit them using a Conventional Commits message. Follow this protocol:
 
 **Important**: Never use `cd`, `git -C`, `&&`, or `||`. Run each command separately with no path arguments — rely on the shell's current working directory.
+
+## Arguments
+
+If `$ARGUMENTS` contains `--auto`: enable auto mode. In auto mode the skill still displays the grouping analysis and proposed message, but proceeds without asking for confirmation at Steps 2 and 5. The sensitive data scan (Step 4) **always runs** — auto mode never bypasses it.
 
 ## Step 1 — Pre-flight check
 
@@ -65,6 +70,8 @@ If nothing is staged (`git diff --cached --stat` shows no output):
 
    If there is only one group, still use the same format (single commit block with its files and reason) — this makes it clear the agent considered splitting and decided everything belongs together.
 
+   In auto mode, display the analysis as usual, then proceed automatically with the suggested grouping without waiting for a menu choice. Still show which group was selected.
+
    **Inseparable mixed concerns**: when the analysis identifies multiple distinct reasons for change (e.g. a format change and a refactor) but the changes affect the same lines of code and cannot be split into separate commits, explain this directly in the `Reason:` line:
    ```
    Reason: <N> distinct concerns (<concern 1> + <concern 2>), but they
@@ -75,7 +82,7 @@ If nothing is staged (`git diff --cached --stat` shows no output):
 4. **Execute the user's choice** — stage the selected files:
    - For whole files: `git add <files>`.
    - For partial files (intra-file splits): run `python3 ~/.claude/skills/git-commit/scripts/stage-hunks.py --help` to confirm the interface, then invoke it with `--file <path> --hunks <N,N,...>` (hunk numbers are 1-based, matching the order they appear in `git diff <file>`). Show the user which hunks are being staged and confirm before running.
-   - After committing (Steps 3–7), if there are remaining groups, ask: "Ready to commit the next group?" and loop back to present the remaining groups.
+   - After committing (Steps 3–7), if there are remaining groups, ask: "Ready to commit the next group?" and loop back to present the remaining groups. In auto mode, proceed to the next group automatically without asking.
 
 ## Step 3 — Analyze staged diff
 
@@ -119,6 +126,8 @@ Show the proposed message clearly, then ask the user to:
 - (a) confirm and use it as-is
 - (b) edit it (ask for their edits)
 - (c) provide their own message entirely
+
+In auto mode, display the proposed message and proceed to Step 6 immediately without asking for confirmation.
 
 ## Step 6 — Commit
 
