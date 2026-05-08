@@ -24,6 +24,8 @@ Resolve `$ARGUMENTS` to the session context:
 - If `$ARGUMENTS` looks like a file path (contains `/` or `.` with a known extension such as `.md`, `.txt`, `.spec`, `.feature`, or similar), use the `Read` tool to read it. Use the file contents as the session context. If the file does not exist, tell the user and ask for a description instead.
 - Otherwise, use `$ARGUMENTS` as the session context directly.
 
+**Load TDD lessons**: Read `~/.claude/tdd/lessons/LESSONS.md`. If the file exists, parse the list of linked lesson files and Read each one. Collect the full content of all lesson files as **lesson context**. If the file does not exist or lists no lessons, lesson context is empty. Do not read from any archive directory.
+
 ## Loop
 
 Repeat until the user types "done":
@@ -48,8 +50,10 @@ The agent will return: the test file path, the test name, and confirmation it is
 
 ### Green phase
 
-Use the `tdd-green` agent. Pass only:
+Use the `tdd-green` agent. Pass:
 - The failing test file path and test name from the red phase
+- If lesson context is non-empty, the full lesson context prefixed with:
+  > "Before writing implementation, review these TDD anti-patterns and avoid them: [lesson context]"
 
 Wait for the agent to complete. The agent will return: the implementation file(s) changed and confirmation tests are passing. Add the returned files to the **accumulated implementation files** list (tracked across all cycles in this session).
 

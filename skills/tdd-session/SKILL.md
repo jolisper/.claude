@@ -54,6 +54,8 @@ Run `mkdir -p tdd/sessions` then write `tdd/sessions/tdd-<slug>.md`. Tell the us
 
 **This must happen before the loop starts.**
 
+**Load TDD lessons**: Read `~/.claude/tdd/lessons/LESSONS.md`. If the file exists, parse the list of linked lesson files and Read each one. Collect the full content of all lesson files as **lesson context**. If the file does not exist or lists no lessons, lesson context is empty. Do not read from any archive directory.
+
 The logbook is a first-person journal — connected prose, no placeholders. Use Write (full overwrite each time).
 
 Open with a paragraph: the problem, the architecture, the middle chosen, and why.
@@ -97,7 +99,8 @@ Capture: test file, test name.
 
 ### 3c — Green
 
-**Invoke the `tdd-green` agent using the `Agent` tool.** `subagent_type: "tdd-green"`. Pass: test file and test name.
+**Invoke the `tdd-green` agent using the `Agent` tool.** `subagent_type: "tdd-green"`. Pass: test file, test name, and — if lesson context is non-empty — the full lesson context prefixed with:
+> "Before writing implementation, review these TDD anti-patterns and avoid them: [lesson context]"
 
 **Wait for the agent to complete.** Do not proceed to Refactor until Green has finished and returned its result. Do not write the implementation yourself — the agent does that.
 
