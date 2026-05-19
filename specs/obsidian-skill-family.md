@@ -36,24 +36,24 @@ proprietary format. Every note is a `.md` file. The entire skill family operates
 direct file I/O — no plugin or running Obsidian instance required.
 
 The fresh vault (`~/Documents/Inviu Vault`) has:
-- `app.json: {}` — pure defaults; **wikilinks are the default link format**
+- `app.json: {}` — pure defaults
 - No community plugins installed
 - Core plugins enabled: `graph`, `backlink`, `outgoing-link`, `tag-pane`, `properties`,
   `daily-notes`, `templates`, `bases`, `sync`
 
-### Wikilinks
+### Markdown Links
 
-Internal links: `[[Note Name]]`, `[[Note Name|alias]]`, `[[Note Name#Heading]]`.
-Obsidian resolves these across the vault by filename, regardless of directory.
-Skills emit wikilinks — not markdown links — because wikilinks appear in the graph
-and backlinks panel.
+Skills use standard markdown links — not wikilinks. Link format:
+`[display text](relative/path/to/note.md)`. This avoids any Obsidian-specific
+syntax and keeps notes portable. Obsidian resolves markdown links in the graph
+and backlinks panel the same way it resolves wikilinks.
 
 ### Tag-Notes Pattern
 
-A tag-note is a regular `.md` file whose name starts with `@`. Content notes link
-to it with `[[@topic]]`. The backlinks panel on `@topic.md` becomes a live,
-auto-maintained index of every note on that topic — no queries, no plugins, no
-maintenance.
+A tag-note is a regular `.md` file whose name starts with `@`, stored in the
+`@tags/` folder. Content notes link to it with `[@topic](@tags/@topic.md)`.
+The backlinks panel on `@topic.md` becomes a live, auto-maintained index of
+every note on that topic — no queries, no plugins, no maintenance.
 
 Advantages over `#tags`:
 - Clickable from the graph
@@ -150,13 +150,13 @@ anchors the link; Obsidian's link-update feature keeps the title portion in sync
 
 ```
 $OBSIDIAN_VAULT/
-├── @ (Tags)/
+├── @tags/
 │   └── @{topic}.md              ← tag-note hubs; one per topic, person, project
 └── {YYYYMMDDHHmm} {title}.md   ← all content notes, flat at root
 ```
 
 That's the entire structure. No `Inbox/`, `Projects/`, `Notes/`, or `Daily/` folders.
-The `@ (Tags)/` folder is the only special directory — its `@` prefix keeps it at
+The `@tags/` folder is the only special directory — its `@` prefix keeps it at
 the top of the file explorer.
 
 ### Tag-note format
@@ -177,13 +177,19 @@ date: YYYY-MM-DD
 
 # Title
 
-[[@tag1]] [[@tag2]]
+[@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)
 
-{body}
+{one or two sentence summary}
+
+**Context:** why this was captured.
+
+**Content:** decisions, code, findings, references.
 ```
 
-The tag-link line immediately follows the heading. It is the first thing a reader
-sees and the primary connection to the graph.
+The tag-link line immediately follows the heading. The summary provides an at-a-glance
+overview and is a primary target for search ranking. `Context` and `Content` are always
+present; additional sections (e.g. `**Decision**`, `**References**`) may be added when
+the content warrants it.
 
 ---
 
@@ -239,42 +245,54 @@ Then re-invoke this skill.
 
 ### `obsidian-capture`
 
-**Purpose:** Instant note creation. Any thought, finding, snippet, or decision.
-Parses `@tags` from the input, creates missing tag-notes, suggests existing ones.
-No questions asked.
+**Purpose:** Captures session context as a note. `$ARGUMENTS` is a hint or instruction
+— not the literal note content. Claude reads the hint, draws on session context, and
+composes the note body. `@tags` in the hint become tag-note references. No questions asked.
 
-**Invocation:** `/obsidian-capture <content>`
-**Model-invocable:** `true` — Claude proactively captures key findings.
+**Invocation:** `/obsidian-capture <hint>`
+**Model-invocable:** `false` — always explicitly triggered by the user.
 **Allowed tools:** `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write`
 
 **Protocol:**
 
 1. Resolve vault path. On failure: show setup message and stop.
 2. Run `date +%Y%m%d%H%M` for the Zettelkasten ID and `date +%Y-%m-%d` for frontmatter.
-3. Parse `$ARGUMENTS` for `@word` tokens. Each becomes a tag-note reference.
-4. For each `@topic` found: run `tag-note.sh --vault VAULT --tag topic`.
-   The script creates `@ (Tags)/@topic.md` if it doesn't exist.
-5. If no `@tags` found in input: run `tag-note.sh --suggest --vault VAULT --content "$ARGUMENTS"`.
-   The script greps existing tag-notes for semantic matches and prints suggestions.
-   Print them: `Suggested tags: [[@tdd]] [[@java]] — add any with /obsidian-capture @tdd ...`
-   Do not block or ask — this is advisory only.
-6. Derive filename: `{ID} {first 6 words of content}.md` (slugified title portion).
+3. Parse `$ARGUMENTS` for `@word` tokens — these are **explicit tags**.
+4. For each explicit tag: run `tag-note.sh --vault VAULT --tag topic`.
+   The script creates `@tags/@topic.md` if it doesn't exist. No confirmation needed.
+5. Glob `@tags/` to see all existing tags. Using the hint and session context, identify
+   any additional relevant tags. If found, present them for confirmation:
+   ```
+   Suggested tags: @tdd @java — add? (y/n or pick: 1 2)
+   ```
+   Add only confirmed tags. Run `tag-note.sh` for any confirmed tag that doesn't exist yet.
+6. Strip `@word` tokens from `$ARGUMENTS`, then derive filename:
+   `{ID} {first 6 words of stripped content}.md` — title portion uses plain
+   spaces (e.g. `202605111430 Rebates architecture decision.md`).
 7. Collision check: if `{ID}.md` prefix already exists in vault root, append next
    available letter suffix to the ID (`a`, `b`, ...) until unique.
-8. Compose the note:
+8. Compose the note from session context, using the hint as a spotlight — capture only
+   what the hint points to, not the full session. The note must be self-contained: a
+   reader with no session context should understand it fully. Include code snippets,
+   decisions, links, and references as needed. Length and structure follow the content.
+9. Write the note:
    ```markdown
    ---
    date: {YYYY-MM-DD}
    ---
 
-   # {first line of content}
+   # {title}
 
-   {tag-link line: [[@tag1]] [[@tag2]]}
+   {tag-link line: [@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)}
 
-   {full content}
+   {one or two sentence summary}
+
+   **Context:** why this was captured.
+
+   **Content:** decisions, code, findings, references.
    ```
-9. Write to `$OBSIDIAN_VAULT/{filename}.md`.
-10. Confirm: `Captured → {filename}.md`
+10. Write to `$OBSIDIAN_VAULT/{filename}.md`.
+11. Confirm: `Captured → {filename}.md`
 
 **Failure contract:**
 - Vault path missing: show setup message, stop.
@@ -289,7 +307,7 @@ No questions asked.
 fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 
 **Invocation:** `/obsidian-update <id or title>`
-**Model-invocable:** `true` — Claude can update notes after a session ends.
+**Model-invocable:** `false` — always human-driven.
 **Allowed tools:** `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion`
 
 **Protocol:**
@@ -350,32 +368,43 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 **Model-invocable:** `true` — Claude retrieves past context autonomously.
 **Allowed tools:** `Read Glob Grep Bash(bash:*) AskUserQuestion`
 
+**Search model:**
+
+- `@word` tokens in the query are **tag filters**; remaining words are the **keyword**.
+- **Tag filter:** strip the leading `@` from each tag token, then Grep all content notes
+  for `](@tags/@{topic}` to collect the matching note set. Multiple tags are combined
+  with OR (union) — a note is included if it links to any of the specified tags.
+- **Keyword filter:** applied within the tag-filtered set (or across the full vault if
+  no tags were given). Matches note filenames and body text.
+- Tag-only query (no keyword): returns all notes in the tag-filtered set.
+- Keyword-only query (no tags): searches the full vault.
+
 **Protocol:**
 
 1. Resolve vault path. On failure: setup message and stop.
-2. Run three searches (Glob + Grep) against `$OBSIDIAN_VAULT`:
-   - **Tag match:** if query starts with `@`, Glob `@ (Tags)/@*{query}*.md` and
-     Grep all notes for `[[@{query}]]` to find every note on that topic.
-   - **Title match:** Glob `*.md` at root, filter filenames containing query terms
-     (match against the title portion after the ID prefix).
-   - **Full-text match:** Grep `*.md` at root for query terms.
-3. Exclude `@ (Tags)/` files from title and full-text results (they're hubs, not content).
-4. Merge and deduplicate. Rank: tag match > title match > body match. Return top 5.
-5. Present results:
+2. Parse `$ARGUMENTS`: split into `@word` tag tokens and remaining keyword string.
+3. **Build the candidate set:**
+   - If tags present: Grep all content notes at vault root for each tag pattern
+     `](@tags/@{topic}`; union the results.
+   - If no tags: candidate set is all content notes at vault root.
+4. **Apply keyword filter:** if a keyword string is present, filter the candidate set
+   to notes whose filename or body contains the keyword terms.
+5. Return top 5 results, ranked: title match > body match.
+6. Present results:
    ```
    [1] 202605101020 Rebates architecture decision.md
-       Tags: [[@rebates]] [[@architecture]]
+       Tags: [@rebates](@tags/@rebates.md) [@architecture](@tags/@architecture.md)
        "...commission calculations run nightly after market close..."
 
    [2] 202605091400 Rebates service overview.md
-       Tags: [[@rebates]] [[@projects]]
+       Tags: [@rebates](@tags/@rebates.md) [@projects](@tags/@projects.md)
        "...advisors linked by alias lookup..."
    ```
-6. Ask: `Enter a number to view, or (x) to exit.`
-7. On selection: Read and print the full note. Ask: `(b) Back  (x) Exit`
+7. Ask: `Enter a number to view, or (x) to exit.`
+8. On selection: Read and print the full note. Ask: `(b) Back  (x) Exit`
 
 **When no results:** report "No notes found for `{query}`." and suggest
-`/obsidian-capture @{query} ...` to create a first entry on that topic.
+`/obsidian-capture @{topic} ...` to create a first entry on that topic.
 
 ---
 
@@ -399,23 +428,20 @@ check `~/.claude/obsidian-vault` (global) → validate path exists and contains
 
 ### `tag-note.sh`
 
-Ensures a tag-note exists, and optionally suggests existing tags.
+Ensures a tag-note exists.
 
 ```
 Usage:
   bash ~/.claude/skills/obsidian/scripts/tag-note.sh --vault PATH --tag TOPIC
-    → creates @ (Tags)/@{topic}.md if absent; prints its path
+    → creates @tags/@{topic}.md if absent; prints its path
     → exit 0 always (idempotent)
-
-  bash ~/.claude/skills/obsidian/scripts/tag-note.sh --suggest --vault PATH --content TEXT
-    → greps existing tag-note filenames against words in TEXT
-    → prints matching @tags one per line
 ```
 
 ### `slug.sh`
 
-Converts a human-readable title to a kebab-case slug (used for the title
-portion of the filename, after the ID).
+Converts a human-readable title to a kebab-case slug. Not used for note
+filenames (which use plain spaces). Reserved for future skills that need
+a URL-safe identifier.
 
 ```
 Usage: bash ~/.claude/skills/obsidian/scripts/slug.sh "My Note Title"
@@ -431,14 +457,18 @@ Usage: bash ~/.claude/skills/obsidian/scripts/search.sh --vault PATH --query QUE
 Output: lines of: SCORE\tFILE\tSNIPPET
 ```
 
+`SCORE` is an integer: +2 for each keyword term matched in the filename or summary
+line, +1 for each term matched elsewhere in the body. Results sorted descending by
+score; newest ID first as tiebreaker.
+
 ---
 
 ## `disable-model-invocation` Decisions
 
 | Skill | Value | Rationale |
 |-------|-------|-----------|
-| `obsidian-capture` | `false` | Claude captures key findings proactively |
-| `obsidian-update` | `false` | Claude updates notes after recap/tdd-session |
+| `obsidian-capture` | `true` | always explicitly triggered by the user |
+| `obsidian-update` | `false` | always human-driven |
 | `obsidian-search` | `false` | Claude retrieves vault context autonomously |
 
 ---
@@ -447,7 +477,7 @@ Output: lines of: SCORE\tFILE\tSNIPPET
 
 | Skill | Tools |
 |-------|-------|
-| `obsidian-capture` | `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
+| `obsidian-capture` | `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion` |
 | `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion` |
 | `obsidian-search` | `Read Glob Grep Bash(bash:*) AskUserQuestion` |
 
@@ -484,4 +514,46 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 
 ## Phase 2 — Future Skills
 
-No Phase 2 skills defined yet. Candidates will be identified from real vault usage.
+### `obsidian-literal`
+
+Captures input exactly as-is, with no Claude interpretation or composition. The raw
+content of `$ARGUMENTS` becomes the note body. For when the user wants to preserve
+a snippet, quote, code block, or raw thought verbatim. Format TBD.
+
+### `obsidian-log`
+
+An activity log skill, model-invocable. Monitors session interactions and captures
+important topics, decisions, and actions as structured log entries. Intended to run
+autonomously — Claude decides what is worth logging. Format and trigger conditions TBD.
+
+---
+
+## Open Questions
+
+Points that need a decision before implementation begins.
+
+~~1. **`@tags` in title derivation**~~ — `@word` tokens are input syntax for tagging and
+   are stripped before deriving the filename and heading title.
+
+~~2. **`obsidian-update` in autonomous mode**~~ — `model-invocable` set to `false`;
+   skill is always human-driven.
+
+~~3. **Tag match grep pattern**~~ — resolved as part of the search model redesign.
+   Tags are parsed separately from the query string; `@` is stripped before building
+   the grep pattern. Multiple tags use OR. See updated search protocol.
+
+~~4. **Tag suggestion mechanism**~~ — resolved. Claude globs `@tags/` and uses session
+   context to suggest additional tags. Explicit tags are applied automatically; suggested
+   tags require user confirmation. `tag-note.sh --suggest` mode removed.
+
+~~5. **`search.sh` SCORE**~~ — resolved. SCORE is an integer computed as:
+   +2 for each keyword term matched in the filename, +1 for each term matched in the
+   body. Results sorted descending by score; newest ID first as tiebreaker.
+
+~~6. **`obsidian-capture` composition guidelines**~~ — resolved. Hint acts as a spotlight.
+   Note must be self-contained. Fixed structure: title, tags, summary, Context, Content.
+   Length and additional sections follow the content.
+
+7. **`obsidian-log` — format and trigger conditions TBD**
+   Needs decisions on: what constitutes a loggable event, entry format, whether it writes
+   one note per session or appends to a running log, and how Claude decides what to capture.
