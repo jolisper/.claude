@@ -25,6 +25,9 @@ statusline/statusline.local.conf
 !docs/
 !docs/**
 
+!specs/
+!specs/**
+
 # Re-ignore personal/generated files within allowed dirs
 agents/*.bak
 
