@@ -1,5 +1,19 @@
 # Spec: `--auto` Flag for Git Family Skills
 
+## Implementation Status
+
+| Skill | Status |
+|---|---|
+| `git-commit` | ✅ Implemented |
+| `git-commit-push` | ✅ Implemented |
+| `git-new-branch` | ⬜ Not implemented |
+| `git-pr` | ⬜ Not implemented |
+| `git-push` | ⬜ Not implemented |
+| `git-pull` | ⬜ Not implemented |
+| `git-rebase` | ⬜ Not implemented |
+
+---
+
 ## Summary
 
 Add an `--auto` argument to git skills that skips interactive confirmations by using
@@ -48,7 +62,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 
 ## Per-Skill Breakdown
 
-### `git-commit`
+### `git-commit` ✅ Implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -56,7 +70,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Confirm proposed commit message | Accept without confirmation |
 | Sensitive data detected | **Stop — always requires user confirmation** |
 
-### `git-new-branch`
+### `git-new-branch` ⬜ Not implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -65,7 +79,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Dirty working tree — confirm checkout | Proceed (stash if needed) |
 | Branch name spec violation | **Stop — fix is ambiguous** |
 
-### `git-pr`
+### `git-pr` ⬜ Not implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -75,7 +89,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Missing/invalid BITBUCKET_TOKEN | **Stop — auth error** |
 | API error | **Stop — surface error to user** |
 
-### `git-push`
+### `git-push` ⬜ Not implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -84,7 +98,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Divergence detected — force or pull | **Stop — destructive without more context** |
 | Auth/network error | **Stop** |
 
-### `git-rebase`
+### `git-rebase` ⬜ Not implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -93,7 +107,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Post-rebase build/test check | Skip (default: no) |
 | Conflict resolution per file | **Stop — requires judgment** |
 
-### `git-pull`
+### `git-pull` ⬜ Not implemented
 
 | Decision | Auto behavior |
 |---|---|
@@ -101,7 +115,7 @@ Option B is the natural evolution of Option A once conflict-heavy skills are tac
 | Post-pull build/test check | Skip (default: no) |
 | Conflict resolution per file | **Stop — requires judgment** |
 
-### `git-commit-push`
+### `git-commit-push` ✅ Implemented
 
 Inherits `--auto` behavior from both `git-commit` and `git-push`. The explicit
 "All commits done. Ready to push?" confirmation is skipped. All blockers from
@@ -118,20 +132,18 @@ both sub-skills still apply.
 
 ## Rollout Order
 
-Start with the three high-value, conflict-free skills where `--auto` automates
-nearly everything:
+Phase 1 — conflict-free skills (high value, low risk):
 
-1. `git-commit`
-2. `git-new-branch`
-3. `git-pr`
+1. ✅ `git-commit`
+2. ⬜ `git-new-branch`
+3. ⬜ `git-pr`
+4. ✅ `git-commit-push` (implemented alongside `git-commit`; inherits its behavior)
 
-Then extend to the conflict-heavy skills once Option B (per-decision overrides)
-is designed:
+Phase 2 — conflict-heavy skills, once Option B (per-decision overrides) is designed:
 
-4. `git-push`
-5. `git-pull`
-6. `git-rebase`
-7. `git-commit-push`
+5. ⬜ `git-push`
+6. ⬜ `git-pull`
+7. ⬜ `git-rebase`
 
 ## Open Questions
 
