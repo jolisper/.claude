@@ -17,11 +17,12 @@ required.
 Notes are identified by a **Zettelkasten timestamp** prefix (`YYYYMMDDHHmm`) embedded
 in the filename. This gives every note a stable, unique ID independent of its title.
 
-The family has **3 core skills**:
+The family has **4 core skills**:
 
 | Tier | Skill | Purpose |
 |------|-------|---------|
-| Write | `obsidian-capture` | Instant note with `@tags`, no questions asked |
+| Setup | `obsidian-vault` | Configure and initialize a vault; validate readiness |
+| Write | `obsidian-capture` | Capture session context as a note, guided by a hint |
 | Write | `obsidian-update` | Add content to an existing note by ID or fuzzy name |
 | Read | `obsidian-search` | Search and surface relevant vault notes |
 
@@ -240,6 +241,47 @@ Then re-invoke this skill.
 ---
 
 ## Skill Specifications
+
+---
+
+### `obsidian-vault`
+
+**Purpose:** Configure and initialize an Obsidian vault for use with the skill family.
+Run once before using any other skill. Works with existing vaults and creates new ones.
+Ensures the vault is in the correct state and gives a clear green light when done.
+
+**Invocation:** `/obsidian-vault [path]`
+**Model-invocable:** `false` — always explicitly triggered by the user.
+**Allowed tools:** `Read Glob Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion`
+
+**Protocol:**
+
+1. If `$ARGUMENTS` contains a path, use it. Otherwise ask: `Enter the vault path:`
+2. Expand `~` and resolve the absolute path.
+3. **If path does not exist:**
+   - Ask: `{path} does not exist. Create a new vault here? (y/n)`
+   - On yes: create the directory. On no: stop.
+4. **Check for `.obsidian/` directory:**
+   - If missing: ask: `No .obsidian/ directory found. Initialize as a new Obsidian vault? (y/n)`
+   - On yes: create `.obsidian/` and write `{}` to `.obsidian/app.json`.
+   - On no: stop.
+5. **Ensure `@tags/` exists:** create it if missing. Never touch existing contents.
+6. **Write config pointer:** write the absolute path to `~/.claude/obsidian-vault`.
+7. **Validate:**
+   - Vault path is readable and writable
+   - `.obsidian/` directory exists
+   - `@tags/` directory exists
+   - `~/.claude/obsidian-vault` points to the correct path
+8. Report result:
+   ```
+   ✓ Vault configured: /path/to/vault
+   ✓ @tags/ ready
+   ✓ Config pointer written to ~/.claude/obsidian-vault
+   All skills are ready to use.
+   ```
+
+**Failure contract:**
+- Any validation step fails: report exactly which check failed and what the user needs to fix.
 
 ---
 
@@ -467,6 +509,7 @@ score; newest ID first as tiebreaker.
 
 | Skill | Value | Rationale |
 |-------|-------|-----------|
+| `obsidian-vault` | `true` | setup skill, always user-triggered |
 | `obsidian-capture` | `true` | always explicitly triggered by the user |
 | `obsidian-update` | `false` | always human-driven |
 | `obsidian-search` | `false` | Claude retrieves vault context autonomously |
@@ -477,6 +520,7 @@ score; newest ID first as tiebreaker.
 
 | Skill | Tools |
 |-------|-------|
+| `obsidian-vault` | `Read Glob Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion` |
 | `obsidian-capture` | `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion` |
 | `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion` |
 | `obsidian-search` | `Read Glob Grep Bash(bash:*) AskUserQuestion` |
@@ -506,9 +550,10 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 ## Implementation Order
 
 1. **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh`
-2. **`obsidian-capture`** — smallest skill; validates the config, ID generation, and tag-note flow
-3. **`obsidian-search`** — unlocks retrieval; `obsidian-update` depends on its search logic
-4. **`obsidian-update`** — builds on search for note resolution
+2. **`obsidian-vault`** — must work before any other skill; validates the entire setup
+3. **`obsidian-capture`** — validates ID generation and tag-note flow
+4. **`obsidian-search`** — unlocks retrieval; `obsidian-update` depends on its search logic
+5. **`obsidian-update`** — builds on search for note resolution
 
 ---
 
@@ -522,9 +567,30 @@ a snippet, quote, code block, or raw thought verbatim. Format TBD.
 
 ### `obsidian-log`
 
-An activity log skill, model-invocable. Monitors session interactions and captures
-important topics, decisions, and actions as structured log entries. Intended to run
-autonomously — Claude decides what is worth logging. Format and trigger conditions TBD.
+Automatically records session activity as a single Obsidian note, built incrementally
+as the session progresses. The goal: a user reading the log after a long day should
+have a clear picture of what happened, from a list of short summaries.
+
+**Trigger:** `Stop` hook — fires once per turn, after Claude finishes responding.
+The hook is deterministic and runs outside the session agent (no context leak).
+
+**Mechanism:** the `Stop` hook invokes a separate `claude` CLI process using
+**Claude Haiku** (fast, low cost — ~$0.000005 per turn). That process receives
+the turn context (user prompt + Claude response) and appends a one-line summary
+to the session log note. The session agent is unaware of the log.
+
+**One note per session:** a new timestamped note is created at session start
+(`SessionStart` hook) and appended to on each turn.
+
+**Loggable events** (what Haiku looks for in each turn):
+- Decisions made (architectural, design, product)
+- Problems encountered and how they were resolved
+- Files or components created or significantly modified
+- Skills or tools used
+- Open questions left unresolved
+
+**Still TBD:** note format and structure, exact Haiku prompt, note naming convention,
+and how granular each entry should be.
 
 ---
 
@@ -554,6 +620,6 @@ Points that need a decision before implementation begins.
    Note must be self-contained. Fixed structure: title, tags, summary, Context, Content.
    Length and additional sections follow the content.
 
-7. **`obsidian-log` — format and trigger conditions TBD**
-   Needs decisions on: what constitutes a loggable event, entry format, whether it writes
-   one note per session or appends to a running log, and how Claude decides what to capture.
+~~7. **`obsidian-log`**~~ — core decisions made. One note per session, incremental writes
+   via `Stop` hook, Haiku writes one-line summaries per turn. Note format, Haiku prompt,
+   and entry granularity still TBD — tracked in Phase 2 spec.
