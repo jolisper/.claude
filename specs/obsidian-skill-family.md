@@ -217,12 +217,22 @@ Tag-notes in `@ (Tags)/` have no frontmatter at all.
 All skills resolve the vault path using this priority chain:
 
 1. `$OBSIDIAN_VAULT` environment variable (absolute path)
-2. `.claude/obsidian-vault` file at the project root (one line: the absolute path)
-3. `~/.claude/obsidian-vault` file at the global level (one line: the absolute path)
+2. `.claude/obsidian-vault` file at the project root — JSON, see format below
+3. `~/.claude/obsidian-vault` file at the global level — JSON, see format below
 4. **Fail with a setup message** — skills never guess or create a vault silently
 
-The project-local file (step 2) allows per-project vault overrides. Most users
-will only configure the global pointer and never need the local one.
+The project-local file (step 2) overrides the global one when both exist. The
+`obsidian-vault` skill asks the user which scope to write during setup.
+
+### Config file format
+
+Both the project-local and global config files use JSON:
+
+```json
+{
+  "vault": "/absolute/path/to/vault"
+}
+```
 
 ### Setup message
 
@@ -231,9 +241,7 @@ Obsidian vault not configured. Set it up with one of:
 
   export OBSIDIAN_VAULT="/path/to/your/vault"
 
-Or create a persistent pointer:
-
-  echo "/path/to/your/vault" > ~/.claude/obsidian-vault
+Or run /obsidian-vault to configure interactively.
 
 Then re-invoke this skill.
 ```
@@ -256,32 +264,36 @@ Ensures the vault is in the correct state and gives a clear green light when don
 
 **Protocol:**
 
-1. If `$ARGUMENTS` contains a path, use it. Otherwise ask: `Enter the vault path:`
+1. If `$ARGUMENTS` contains a path, use it. Otherwise ask for the vault path.
 2. Expand `~` and resolve the absolute path.
-3. **If path does not exist:**
-   - Ask: `{path} does not exist. Create a new vault here? (y/n)`
-   - On yes: create the directory. On no: stop.
-4. **Check for `.obsidian/` directory:**
-   - If missing: ask: `No .obsidian/ directory found. Initialize as a new Obsidian vault? (y/n)`
-   - On yes: create `.obsidian/` and write `{}` to `.obsidian/app.json`.
-   - On no: stop.
+3. **Detect vault state** (two separate bash checks):
+   - Path exists + `.obsidian/` exists → existing vault, skip to step 5
+   - Path exists, no `.obsidian/` → go to step 4b
+   - Path does not exist → go to step 4a
+4. **4a** — path missing: ask `(a) Create a new vault here / (b) Cancel`. On (a): mkdir, continue to 4b.
+   **4b** — no `.obsidian/`: ask `(a) Initialize as a new Obsidian vault / (b) Cancel`. On (a): create `.obsidian/` and write `{}` to `.obsidian/app.json`.
 5. **Ensure `@tags/` exists:** create it if missing. Never touch existing contents.
-6. **Write config pointer:** write the absolute path to `~/.claude/obsidian-vault`.
-7. **Validate:**
+6. **Choose config scope:** ask `(a) Project-local (.claude/obsidian-vault in cwd) / (b) Global (~/.claude/obsidian-vault)`.
+   Write JSON config to the chosen location:
+   ```json
+   { "vault": "/absolute/path/to/vault" }
+   ```
+7. **Validate** (each as a separate bash call):
    - Vault path is readable and writable
    - `.obsidian/` directory exists
    - `@tags/` directory exists
-   - `~/.claude/obsidian-vault` points to the correct path
+   - Config file is valid JSON and `vault` equals the correct path
 8. Report result:
    ```
    ✓ Vault configured: /path/to/vault
    ✓ @tags/ ready
-   ✓ Config pointer written to ~/.claude/obsidian-vault
+   ✓ Config pointer written to {config_path}
    All skills are ready to use.
    ```
 
 **Failure contract:**
-- Any validation step fails: report exactly which check failed and what the user needs to fix.
+- Any mkdir or write fails: report the error and stop immediately.
+- Any validation check fails: report exactly which check failed and what the user needs to fix.
 
 ---
 
@@ -623,3 +635,11 @@ Points that need a decision before implementation begins.
 ~~7. **`obsidian-log`**~~ — core decisions made. One note per session, incremental writes
    via `Stop` hook, Haiku writes one-line summaries per turn. Note format, Haiku prompt,
    and entry granularity still TBD — tracked in Phase 2 spec.
+
+~~8. **Config file format**~~ — resolved. Both project-local and global config files use
+   JSON: `{"vault": "/absolute/path"}`. Plain-text format rejected in favor of JSON for
+   extensibility.
+
+~~9. **Config scope selection**~~ — resolved. `obsidian-vault` asks the user at setup time
+   whether to write project-local (`.claude/obsidian-vault`) or global (`~/.claude/obsidian-vault`).
+   Local overrides global when both exist.
