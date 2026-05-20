@@ -11,8 +11,8 @@ Configure and initialize an Obsidian vault for the obsidian skill family. Works 
 
 Config resolution order (highest priority first):
 1. `$OBSIDIAN_VAULT` environment variable
-2. `.claude/obsidian-vault` in the current directory (project-local)
-3. `~/.claude/obsidian-vault` (global)
+2. `.claude/obsidian-vault.json` in the current directory (project-local)
+3. `~/.claude/obsidian-vault.json` (global)
 
 A local config overrides the global one when both exist.
 
@@ -68,13 +68,13 @@ Ask:
 
 ```
 Where should the vault config be saved?
-(a) Project-local — .claude/obsidian-vault in the current directory (overrides global)
-(b) Global — ~/.claude/obsidian-vault (applies to all projects)
+(a) Project-local — .claude/obsidian-vault.json in the current directory (overrides global)
+(b) Global — ~/.claude/obsidian-vault.json (applies to all projects)
 ```
 
 Set `{config_path}` to:
-- (a): `{cwd}/.claude/obsidian-vault` — if `.claude/` does not exist, run `mkdir -p {cwd}/.claude`
-- (b): `~/.claude/obsidian-vault`
+- (a): `{cwd}/.claude/obsidian-vault.json` — if `.claude/` does not exist, run `mkdir -p {cwd}/.claude`
+- (b): `~/.claude/obsidian-vault.json`
 
 ### Step 6 — Write config pointer
 

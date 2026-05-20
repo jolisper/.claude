@@ -217,8 +217,8 @@ Tag-notes in `@ (Tags)/` have no frontmatter at all.
 All skills resolve the vault path using this priority chain:
 
 1. `$OBSIDIAN_VAULT` environment variable (absolute path)
-2. `.claude/obsidian-vault` file at the project root — JSON, see format below
-3. `~/.claude/obsidian-vault` file at the global level — JSON, see format below
+2. `.claude/obsidian-vault.json` file at the project root
+3. `~/.claude/obsidian-vault.json` file at the global level
 4. **Fail with a setup message** — skills never guess or create a vault silently
 
 The project-local file (step 2) overrides the global one when both exist. The
@@ -273,7 +273,7 @@ Ensures the vault is in the correct state and gives a clear green light when don
 4. **4a** — path missing: ask `(a) Create a new vault here / (b) Cancel`. On (a): mkdir, continue to 4b.
    **4b** — no `.obsidian/`: ask `(a) Initialize as a new Obsidian vault / (b) Cancel`. On (a): create `.obsidian/` and write `{}` to `.obsidian/app.json`.
 5. **Ensure `@tags/` exists:** create it if missing. Never touch existing contents.
-6. **Choose config scope:** ask `(a) Project-local (.claude/obsidian-vault in cwd) / (b) Global (~/.claude/obsidian-vault)`.
+6. **Choose config scope:** ask `(a) Project-local (.claude/obsidian-vault.json in cwd) / (b) Global (~/.claude/obsidian-vault.json)`.
    Write JSON config to the chosen location:
    ```json
    { "vault": "/absolute/path/to/vault" }
@@ -561,11 +561,13 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 
 ## Implementation Order
 
-1. **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh`
-2. **`obsidian-vault`** — must work before any other skill; validates the entire setup
-3. **`obsidian-capture`** — validates ID generation and tag-note flow
-4. **`obsidian-search`** — unlocks retrieval; `obsidian-update` depends on its search logic
-5. **`obsidian-update`** — builds on search for note resolution
+| # | Item | Status |
+|---|------|--------|
+| 1 | **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh` | ⬜ Not started |
+| 2 | **`obsidian-vault`** — must work before any other skill; validates the entire setup | ✅ Done (`skills/obsidian-vault/SKILL.md`) |
+| 3 | **`obsidian-capture`** — validates ID generation and tag-note flow | ⬜ Not started |
+| 4 | **`obsidian-search`** — unlocks retrieval; `obsidian-update` depends on its search logic | ⬜ Not started |
+| 5 | **`obsidian-update`** — builds on search for note resolution | ⬜ Not started |
 
 ---
 
@@ -641,5 +643,5 @@ Points that need a decision before implementation begins.
    extensibility.
 
 ~~9. **Config scope selection**~~ — resolved. `obsidian-vault` asks the user at setup time
-   whether to write project-local (`.claude/obsidian-vault`) or global (`~/.claude/obsidian-vault`).
+   whether to write project-local (`.claude/obsidian-vault.json`) or global (`~/.claude/obsidian-vault.json`).
    Local overrides global when both exist.
