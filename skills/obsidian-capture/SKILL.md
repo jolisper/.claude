@@ -1,0 +1,148 @@
+---
+name: obsidian-capture
+description: >
+  Use this skill to capture session context as an Obsidian note. Invoke when
+  the user runs /obsidian-capture to save a finding, decision, or piece of
+  context from the current session to the vault as a structured note.
+argument-hint: "[#tag ...] <hint> [#tag ...]"
+disable-model-invocation: true
+allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write AskUserQuestion
+when_to_use: >
+  Invoke when the user explicitly runs /obsidian-capture to persist session
+  context, findings, or decisions into their Obsidian vault.
+---
+
+Capture session context as a structured Obsidian note. `$ARGUMENTS` is a mix
+of optional `#tag` tokens and a mandatory hint. Tags can appear anywhere in
+the string.
+
+## Step 1 — Resolve vault path
+
+Check in order, stopping at the first match. Set VAULT to the resolved path.
+
+1. Run `bash -c 'printf "%s" "$OBSIDIAN_VAULT"'` — if non-empty, VAULT = that value.
+2. Read `.claude/obsidian-vault.json` in the current directory. If present and
+   has a `vault` field, VAULT = that value.
+3. Read `~/.claude/obsidian-vault.json`. If present and has a `vault` field,
+   VAULT = that value.
+4. If VAULT is still unset, print and stop:
+   ```
+   Obsidian vault not configured. Set it up with one of:
+
+     export OBSIDIAN_VAULT="/path/to/your/vault"
+
+   Or run /obsidian-vault to configure interactively.
+
+   Then re-invoke this skill.
+   ```
+
+## Step 2 — Parse arguments
+
+Extract all tokens matching `#[a-zA-Z][a-zA-Z0-9_-]*` from `$ARGUMENTS`.
+Normalize each to lowercase (strip `#`). Store as **TAGS**.
+The remainder after removing all tag tokens is the **HINT**.
+
+If HINT is empty after stripping:
+  Ask: `What should this note capture?`
+  Apply the same tag-parsing to the answer: extract `#word` tokens into TAGS;
+  the remainder is HINT.
+  If HINT is still empty: report "A hint is required to capture a note." and stop.
+
+## Step 3 — Generate timestamps
+
+Run `date +%Y%m%d%H%M` → **ID**
+
+Run `date +%Y-%m-%d` → **DATE**
+
+## Step 4 — Ensure @tags/ exists
+
+Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
+Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
+
+## Step 5 — Ensure tag stubs exist
+
+For each tag in TAGS:
+
+Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
+Write to `{VAULT}/@tags/@{tag}.md`:
+```markdown
+# @{tag}
+```
+No confirmation needed.
+
+## Step 6 — Suggest additional tags
+
+Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
+`.md` suffix to get the name list.
+
+Using HINT and current session context, identify relevant tags from the
+existing list not already in TAGS.
+
+If suggestions exist, ask:
+```
+Suggested tags: #tag1 #tag2 — add?
+(a) Add all
+(b) Pick — reply with numbers: 1 2 ...
+(c) Skip
+```
+On (a): add all to TAGS. On (b): add only selected. On (c): continue.
+For each newly added tag not yet on disk, write its stub as in Step 5.
+
+## Step 7 — ID collision check
+
+Use Grep to search `{VAULT}` for the line `^id: {ID}` in frontmatter.
+If any file matches: append the next available letter suffix (`a`, `b`, ...)
+and repeat until no match is found. Use the first available value as ID.
+
+## Step 8 — Derive filename
+
+```
+FILENAME = {HINT}.md
+```
+
+Strip any characters invalid in filenames (`/ : ? * \ " < > |`). Collapse
+consecutive spaces to one. Trim leading and trailing spaces.
+
+## Step 9 — Compose note
+
+Draw on session context, using HINT as a spotlight. Capture only what the
+hint points to — not the full session. The note must be self-contained: a
+reader with no session context must understand it fully. Include code
+snippets, decisions, links, and references as needed. Length and additional
+sections follow the content.
+
+Note structure:
+```markdown
+---
+id: {ID}
+date: {DATE}
+---
+
+# {HINT}
+
+[@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)
+
+{one or two sentence summary}
+
+**Context:** {why this was captured}
+
+**Content:** {decisions, code, findings, references}
+```
+
+Omit the tag-link line entirely if TAGS is empty.
+
+## Step 10 — Write and confirm
+
+Write the composed note to `{VAULT}/{FILENAME}`.
+
+Confirm:
+```
+Captured → {FILENAME}  (id: {ID})
+```
+
+## Failure contract
+
+- **Vault not configured:** show the setup message from Step 1 and stop.
+- **Write fails:** print the full composed note content to the conversation
+  so the user can paste it manually. Never silently discard content.
+- **mkdir fails:** report the error and stop.

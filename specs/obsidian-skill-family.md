@@ -133,28 +133,30 @@ from actual vault usage.
 
 ## Note ID System
 
-Every note created by `obsidian-capture` gets a **Zettelkasten timestamp** prefix:
+Every note created by `obsidian-capture` gets a **Zettelkasten timestamp** stored in
+its frontmatter `id:` field. The filename contains only the human-readable title.
 
 ```
-202605111430 Rebates architecture decision.md
-└─────────┘ └──────────────────────────────┘
-    ID              human-readable title
+Rebates architecture decision.md
+───────────────────────────────
+        human-readable title
+
+frontmatter:
+  id: 202605111430
+  date: 2026-05-11
 ```
 
 **Format:** `YYYYMMDDHHmm` — year, month, day, hour, minute (12 digits, minute precision).
 Generated with `date +%Y%m%d%H%M`.
 
 **Collision handling:** if two notes are captured in the same minute, the second gets
-a letter suffix: `202605111430`, `202605111430a`, `202605111430b`, etc. The skill
-checks for existence before writing and appends the next available suffix.
-
-**Wikilinks with ID:** `[[202605111430 Rebates architecture decision]]` — the ID
-anchors the link; Obsidian's link-update feature keeps the title portion in sync.
+a letter suffix on the `id:` value: `202605111430`, `202605111430a`, `202605111430b`,
+etc. The skill greps vault frontmatter for the ID before writing and appends the next
+available suffix. The filename is unaffected.
 
 **Using the ID in skills:**
-- `/obsidian-update 202605111430` — exact match, no ambiguity
-- `/obsidian-update rebates architecture` — fuzzy match on the title portion
-- Multiple fuzzy matches → numbered list → user picks one
+- `/obsidian-update 202605111430` — greps frontmatter for `^id: 202605111430`, exact match
+- `obsidian-search` results always display the `id:` so the user can copy it for updates
 
 ---
 
@@ -163,8 +165,8 @@ anchors the link; Obsidian's link-update feature keeps the title portion in sync
 ```
 $OBSIDIAN_VAULT/
 ├── @tags/
-│   └── @{topic}.md              ← tag-note hubs; one per topic, person, project
-└── {YYYYMMDDHHmm} {title}.md   ← all content notes, flat at root
+│   └── @{topic}.md    ← tag-note hubs; one per topic, person, project
+└── {title}.md         ← all content notes, flat at root; ID lives in frontmatter
 ```
 
 That's the entire structure. No `Inbox/`, `Projects/`, `Notes/`, or `Daily/` folders.
@@ -184,6 +186,7 @@ The backlinks panel provides all the content.
 
 ```markdown
 ---
+id: YYYYMMDDHHmm
 date: YYYY-MM-DD
 ---
 
@@ -207,19 +210,21 @@ the content warrants it.
 
 ## Frontmatter Schema
 
-Every note created by the skill family uses exactly one frontmatter field:
+Every note created by the skill family uses exactly two frontmatter fields:
 
 ```yaml
 ---
+id: YYYYMMDDHHmm
 date: YYYY-MM-DD
 ---
 ```
 
 Nothing else. No `title`, `type`, `status`, `source`, or `tags` fields.
-The `date` field enables Bases views and chronological sorting. Everything
-else is expressed through wikilinks and headings.
+`id` is the stable unique identifier used by skills to look up notes.
+`date` enables Bases views and chronological sorting. Everything else is
+expressed through wikilinks and headings.
 
-Tag-notes in `@ (Tags)/` have no frontmatter at all.
+Tag-notes in `@tags/` have no frontmatter at all.
 
 ---
 
@@ -336,10 +341,10 @@ body. Tags can appear at the start, end, or middle of the argument string.
    Suggested tags: #tdd #java — add? (y/n or pick: 1 2)
    ```
    Add only confirmed tags. Run `tag-note.sh` for any confirmed tag that doesn't exist yet.
-6. Derive filename from the hint: `{ID} {first 6 words of hint}.md` — title portion
-   uses plain spaces (e.g. `202605111430 Rebates architecture decision.md`).
-7. Collision check: if `{ID}.md` prefix already exists in vault root, append next
-   available letter suffix to the ID (`a`, `b`, ...) until unique.
+6. ID collision check: Grep vault root `*.md` files for `^id: {ID}` in frontmatter.
+   If found, append next available letter suffix (`a`, `b`, ...) until unique.
+7. Derive filename from the full hint text: `{hint}.md` — plain spaces, no ID prefix
+   (e.g. `Rebates architecture decision.md`).
 8. Compose the note from session context, using the hint as a spotlight — capture only
    what the hint points to, not the full session. The note must be self-contained: a
    reader with no session context should understand it fully. Include code snippets,
@@ -347,10 +352,11 @@ body. Tags can appear at the start, end, or middle of the argument string.
 9. Write the note:
    ```markdown
    ---
+   id: {YYYYMMDDHHmm}
    date: {YYYY-MM-DD}
    ---
 
-   # {title}
+   # {full hint text}
 
    {tag-link line: [@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)}
 
@@ -361,7 +367,7 @@ body. Tags can appear at the start, end, or middle of the argument string.
    **Content:** decisions, code, findings, references.
    ```
 10. Write to `$OBSIDIAN_VAULT/{filename}.md`.
-11. Confirm: `Captured → {filename}.md`
+11. Confirm: `Captured → {filename}.md  (id: {ID})`
 
 **Failure contract:**
 - Vault path missing: show setup message, stop.
@@ -372,60 +378,42 @@ body. Tags can appear at the start, end, or middle of the argument string.
 
 ### `obsidian-update`
 
-**Purpose:** Add content to an existing note, identified by Zettelkasten ID or
-fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
+**Purpose:** Add content to an existing note, identified by its Zettelkasten ID.
+The natural follow-up to `/recap` and `/tdd-session`.
 
-**Invocation:** `/obsidian-update <id or title>`
+**Invocation:** `/obsidian-update <id>`
 **Model-invocable:** `false` — always human-driven.
 **Allowed tools:** `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion`
 
 **Protocol:**
 
 1. Resolve vault path. On failure: show setup message and stop.
-2. Resolve the target note from `$ARGUMENTS`:
-
-   **If `$ARGUMENTS` is a 12-digit number (or 12-digit + letter):**
-   - Glob `$OBSIDIAN_VAULT/{id}*.md` for an exact ID match.
-   - If found: use it directly.
+2. Validate `$ARGUMENTS` matches `^\d{12}[a-z]?$`. If not: report
+   "Expected a note ID (e.g. 202605111430). Use /obsidian-search to find one." and stop.
+3. Grep all `*.md` files at vault root for `^id: {$ARGUMENTS}` in frontmatter.
+   - If found: use that file.
    - If not found: report "No note found with ID `{id}`." and stop.
-
-   **Otherwise (fuzzy title search):**
-   - Run `search.sh --vault VAULT --query "$ARGUMENTS" --limit 10`.
-   - Filter results to title matches only (not body matches) for precision.
-   - If exactly one match: use it directly, print `Updating: {filename}`.
-   - If multiple matches: present a numbered list and ask:
-     ```
-     Multiple notes match "{query}":
-     [1] 202605101020 Rebates architecture decision.md
-     [2] 202605091400 Rebates service overview.md
-
-     Enter a number to select, or (x) to cancel.
-     ```
-     Wait for selection. On (x): stop.
-   - If no matches: report "No note found matching `{query}`." Suggest
-     `/obsidian-capture` to create one, and stop.
-
-3. Read the selected note. Show its title and last 5 lines as context:
+4. Read the selected note. Show its title and last 5 lines as context:
    ```
-   Updating: 202605101020 Rebates architecture decision.md
+   Updating: Rebates architecture decision.md  (id: 202605101020)
    ...
    Last content: "commission rate is applied after tax deduction"
    ```
-4. Ask: `What do you want to add?`
-5. Parse the answer for `#word` tag tokens. Strip them; the remainder is the content.
+5. Ask: `What do you want to add?`
+6. Parse the answer for `#word` tag tokens. Strip them; the remainder is the content.
    For each new tag (not already linked in the note's tag-link line): run
    `tag-note.sh --vault VAULT --tag topic` to ensure the stub exists, then append
    `[@topic](@tags/@topic.md)` to the note's tag-link line using Edit.
-6. Compose the addition:
+7. Compose the addition:
    ```markdown
 
    ---
 
    {YYYY-MM-DD} — {user's content}
    ```
-7. Append to the end of the note using Edit.
-8. Update the `date:` frontmatter to today.
-9. Confirm: `Updated → {filename}.md`
+8. Append to the end of the note using Edit.
+9. Update the `date:` frontmatter to today.
+10. Confirm: `Updated → {filename}.md  (id: {id})`
 
 **Failure contract:**
 - If Edit fails: report the error, print the content the user wanted to add so
@@ -465,11 +453,11 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 5. Return top 5 results, ranked: title match > body match.
 6. Present results:
    ```
-   [1] 202605101020 Rebates architecture decision.md
+   [1] Rebates architecture decision.md  (id: 202605101020)
        Tags: [@rebates](@tags/@rebates.md) [@architecture](@tags/@architecture.md)
        "...commission calculations run nightly after market close..."
 
-   [2] 202605091400 Rebates service overview.md
+   [2] Rebates service overview.md  (id: 202605091400)
        Tags: [@rebates](@tags/@rebates.md) [@projects](@tags/@projects.md)
        "...advisors linked by alias lookup..."
    ```
@@ -584,9 +572,9 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 |---|------|--------|
 | 1 | **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh` | ⬜ Not started |
 | 2 | **`obsidian-vault`** — must work before any other skill; validates the entire setup | ✅ Done (`skills/obsidian-vault/SKILL.md`) |
-| 3 | **`obsidian-capture`** — validates ID generation and tag-note flow | ⬜ Not started |
-| 4 | **`obsidian-search`** — unlocks retrieval; `obsidian-update` depends on its search logic | ⬜ Not started |
-| 5 | **`obsidian-update`** — builds on search for note resolution | ⬜ Not started |
+| 3 | **`obsidian-capture`** — validates ID generation and tag-note flow | ✅ Done (`skills/obsidian-capture/SKILL.md`) |
+| 4 | **`obsidian-search`** — tag and keyword search; results surface IDs for use with `obsidian-update` | ⬜ Not started |
+| 5 | **`obsidian-update`** — ID-only note lookup via frontmatter grep | ⬜ Not started |
 
 ---
 
