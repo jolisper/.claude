@@ -155,21 +155,12 @@ When no worktree is found for the target branch, the skill says so: "No worktree
 found for `<TARGET>` — skipping removal." Silent skips hide information the user
 may need (e.g. they expected a worktree to exist).
 
-### D10 — `close` hard-refuses unpushed commits; `--force` overrides
+### D10 — Worktree branches are always local; no remote push check
 
-The remote is the safety net for the close-out sequence. Merging into main and
-then deleting the branch removes the only local reference to those commits; if
-the remote never received them and something goes wrong, recovery is painful.
-
-Default behavior: if `git log origin/<TARGET>..<TARGET>` is non-empty, stop with:
-```
-✗ Branch <TARGET> has N unpushed commit(s). Push before closing out.
-  Run /git-push, then retry.
-```
-
-`--force` flag overrides this check for local-only repos or deliberate offline
-workflows: `/git-worktree close <branch> --force`. The flag is surfaced in the
-error message so the user knows it exists.
+Worktree branches follow the lifecycle: create from main → commit → merge into
+main → close. They are never pushed to a remote. The `close` subcommand therefore
+performs no unpushed-commits check — it would always false-positive on local-only
+branches. The `--force` flag that previously bypassed this check has been removed.
 
 ### D11 — `git-merge` is standalone and strictly `--ff-only` in all contexts
 
@@ -186,8 +177,8 @@ support that workflow.
 
 ## Skill: `git-worktree`
 
-**Invocation:** `/git-worktree [add <branch> [path] | list | remove <branch> | prune | close [<branch>] [--force]]`
-**Argument hint:** `[add <branch> | list | remove <branch> | prune | close [<branch>] [--force]]`
+**Invocation:** `/git-worktree [add <branch> [path] | list | remove <branch> | prune | close [<branch>]]`
+**Argument hint:** `[add <branch> | list | remove <branch> | prune | close [<branch>]]`
 **Model-invocable:** `false`
 **disable-model-invocation:** `true`
 **Allowed tools:**
@@ -348,15 +339,7 @@ worktree being closed.
      want to close out?"
 3. Verify target exists: `git branch --list <TARGET>`. Stop if not found.
 4. Determine main branch: `git branch --list main` → `main`, else `master`.
-5. Check for unpushed commits: `git log origin/<TARGET>..<TARGET> --oneline`.
-   If non-empty and `--force` is not in `$ARGUMENTS`:
-   ```
-   ✗ Branch <TARGET> has N unpushed commit(s). Push before closing out.
-     Run /git-push, then retry. Use --force to override.
-   ```
-   Stop.
-   If `--force` is in `$ARGUMENTS`: skip this check and continue.
-6. Determine execution mode:
+5. Determine execution mode:
    - `CLOSING_FROM_INSIDE = (IN_WORKTREE=true AND TARGET == CURRENT)`
 
 **Step 2 — Merge**
@@ -558,6 +541,5 @@ The shared reference doc remains a future refactor for `git-pull`/`git-rebase`.
 ~~4. **`close` with no worktree**~~ — Resolved (D9). Always explicit: "No
 worktree found for `<TARGET>` — skipping removal." No silent skips.
 
-~~5. **Push enforcement before close**~~ — Resolved (D10). Hard refuse with
-a clear error message pointing to `/git-push`. `--force` flag overrides for
-local-only or deliberate offline workflows.
+~~5. **Push enforcement before close**~~ — Superseded (D10). Worktree branches
+are always local-only; no push check is performed.
