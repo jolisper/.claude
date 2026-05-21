@@ -17,13 +17,14 @@ required.
 Notes are identified by a **Zettelkasten timestamp** prefix (`YYYYMMDDHHmm`) embedded
 in the filename. This gives every note a stable, unique ID independent of its title.
 
-The family has **5 core skills**:
+The family has **6 core skills**:
 
 | Tier | Skill | Purpose |
 |------|-------|---------|
 | Setup | `obsidian-vault` | Configure and initialize a vault; validate readiness |
 | Write | `obsidian-capture` | Capture session context as a note, guided by a hint |
 | Write | `obsidian-literal` | Save content verbatim as a note — no synthesis or rewriting |
+| Write | `obsidian-journal` | End-of-day debrief: literal day note + structured synthesis |
 | Write | `obsidian-update` | Add content to an existing note by ID or fuzzy name |
 | Read | `obsidian-search` | Search and surface relevant vault notes |
 
@@ -234,8 +235,8 @@ type: capture
 | Type | Skill | Description |
 |------|-------|-------------|
 | `capture` | `obsidian-capture` | Hint-based snapshot synthesized from session context |
-| `literal` | `obsidian-literal` *(planned)* | Verbatim content — no synthesis or rewriting |
-| `journal` | `obsidian-journal` *(planned)* | Work day or session summary |
+| `literal` | `obsidian-literal` | Verbatim content — no synthesis or rewriting |
+| `journal` | `obsidian-journal` | End-of-day debrief: literal day note + structured synthesis |
 | `log` | `obsidian-log` *(planned)* | Automatic hook-driven activity log |
 
 `obsidian-update` appends content to a note but never changes its `type`.
@@ -543,6 +544,7 @@ be revisited if duplication becomes a maintenance burden.
 | `obsidian-vault` | `Read Glob Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-capture` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-literal` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
+| `obsidian-journal` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit` |
 | `obsidian-search` | `Read Glob Grep Bash(bash:*)` |
 
@@ -580,6 +582,7 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 | 6 | **Language config** — `language` field in config JSON; vault setup asks for ISO code; capture and update write and translate to vault language | ✅ Done (`obsidian-vault` Step 6–7; `obsidian-capture` Step 1+9; `obsidian-update` Step 1+7) |
 | 7 | **`type` frontmatter field** — `obsidian-capture` writes `type: capture`; planned types for future skills: `literal`, `journal`, `log` | ✅ Done (`obsidian-capture` Step 9) |
 | 8 | **`obsidian-literal`** — verbatim capture skill; body preserved exactly as provided; only title synthesized | ✅ Done (`skills/obsidian-literal/SKILL.md`) |
+| 9 | **`obsidian-journal`** — end-of-day debrief; literal day note preserved verbatim + structured synthesis from day note and today's vault notes; one per day | ✅ Done (`skills/obsidian-journal/SKILL.md`) |
 
 ---
 
@@ -593,6 +596,27 @@ Saves content verbatim as a note — no synthesis, no rewriting, no translation 
 the body. Tags are parsed from `$ARGUMENTS`; the remainder (or an interactive
 answer if `$ARGUMENTS` is tag-only) becomes the note body exactly as provided.
 Only the title is synthesized by the skill (in vault LANG). `type: literal`.
+
+### `obsidian-journal`
+
+**Status: implemented** (`skills/obsidian-journal/SKILL.md`)
+
+End-of-day debrief skill. Accepts a literal day note (verbatim, like
+`obsidian-literal`) and synthesizes a structured debrief from it plus today's
+vault notes (any note with `created: {today}`).
+
+**One note per day** — filename is always `Journal {DATE}.md`. If today's journal
+already exists, the skill stops and directs the user to `/obsidian-update`.
+
+**Note structure:**
+- Verbatim day note preserved under a "day note" section header (in LANG)
+- Synthesized summary (2–3 sentences)
+- Structured sections in LANG: Events, Decisions, Reflections, Next steps
+  (sections with no content are omitted)
+- Bullets may link to today's vault notes as source references
+
+**Future data source:** once `obsidian-log` is implemented, its per-session log
+notes will serve as additional synthesis input for the journal.
 
 ### `obsidian-log`
 
