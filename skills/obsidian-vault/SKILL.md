@@ -76,17 +76,29 @@ Set `{config_path}` to:
 - (a): `{cwd}/.claude/obsidian-vault.json` — if `.claude/` does not exist, run `mkdir -p {cwd}/.claude`
 - (b): `~/.claude/obsidian-vault.json`
 
-### Step 6 — Write config pointer
+### Step 6 — Choose vault language
+
+Ask:
+
+```
+What language should notes be written in?
+Enter an ISO 639-1 code (e.g. en, es, fr, pt). Default: en
+```
+
+If the answer is empty, use `en`. Store as LANG.
+
+### Step 7 — Write config pointer
 
 Write to `{config_path}`:
 
 ```json
 {
-  "vault": "{path}"
+  "vault": "{path}",
+  "language": "{LANG}"
 }
 ```
 
-### Step 7 — Validate
+### Step 8 — Validate
 
 Run each as a separate Bash call:
 
@@ -94,14 +106,15 @@ Run each as a separate Bash call:
 2. `bash -c "test -w '{path}'"` — vault is writable
 3. `bash -c "test -d '{path}/.obsidian'"` — .obsidian/ exists
 4. `bash -c "test -d '{path}/@tags'"` — @tags/ exists
-5. Read `{config_path}` — verify it is valid JSON and `vault` equals the correct path
+5. Read `{config_path}` — verify it is valid JSON, `vault` equals the correct path, and `language` is present
 
 If any check fails: report exactly which check failed and what the user must do to fix it. Stop.
 
-### Step 8 — Report
+### Step 9 — Report
 
 ```
 ✓ Vault configured: {path}
+✓ Language: {LANG}
 ✓ @tags/ ready
 ✓ Config pointer written to {config_path}
 All skills are ready to use.
