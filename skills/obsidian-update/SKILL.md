@@ -6,7 +6,7 @@ description: >
   context to a previously captured note. Use /obsidian-search to find the ID first.
 argument-hint: "<id>"
 disable-model-invocation: true
-allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion
+allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit
 when_to_use: >
   Invoke when the user explicitly runs /obsidian-update with a note ID to append
   content. Typically follows /recap, /tdd-session, or /obsidian-search.

@@ -276,7 +276,7 @@ Ensures the vault is in the correct state and gives a clear green light when don
 
 **Invocation:** `/obsidian-vault [path]`
 **Model-invocable:** `false` — always explicitly triggered by the user.
-**Allowed tools:** `Read Glob Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion`
+**Allowed tools:** `Read Glob Bash(mkdir:*) Bash(bash:*) Write`
 
 **Protocol:**
 
@@ -322,7 +322,7 @@ body. Tags can appear at the start, end, or middle of the argument string.
 
 **Invocation:** `/obsidian-capture [#tag ...] <hint> [#tag ...]`
 **Model-invocable:** `false` — always explicitly triggered by the user.
-**Allowed tools:** `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion`
+**Allowed tools:** `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write`
 
 **Protocol:**
 
@@ -333,14 +333,17 @@ body. Tags can appear at the start, end, or middle of the argument string.
    tag-parsing to the answer: extract any `#word` tokens as additional explicit tags,
    use the remainder as the hint.
 3. Run `date +%Y%m%d%H%M` for the Zettelkasten ID and `date +%Y-%m-%d` for frontmatter.
-4. For each explicit tag: run `tag-note.sh --vault VAULT --tag topic`.
-   The script creates `@tags/@topic.md` if it doesn't exist. No confirmation needed.
+4. For each explicit tag: check if `@tags/@{topic}.md` exists; create it if not.
+   No confirmation needed.
 5. Glob `@tags/` to see all existing tags. Using the hint and session context, identify
-   any additional relevant tags. If found, present them for confirmation:
+   any additional relevant tags. If found, present them numbered:
    ```
-   Suggested tags: #tdd #java — add? (y/n or pick: 1 2)
+   Suggested tags: 1) #tdd  2) #java — add?
+   (a) Add all
+   (b) Pick — reply with numbers: 1 2 ...
+   (c) Skip
    ```
-   Add only confirmed tags. Run `tag-note.sh` for any confirmed tag that doesn't exist yet.
+   Add only confirmed tags. Create `@tags/@{topic}.md` stub for any newly added tag.
 6. ID collision check: Grep vault root `*.md` files for `^id: {ID}` in frontmatter.
    If found, append next available letter suffix (`a`, `b`, ...) until unique.
 7. Derive a **TITLE** from the hint and session context — a short, coherent,
@@ -388,7 +391,7 @@ The natural follow-up to `/recap` and `/tdd-session`.
 
 **Invocation:** `/obsidian-update <id>`
 **Model-invocable:** `false` — always human-driven.
-**Allowed tools:** `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion`
+**Allowed tools:** `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit`
 
 **Protocol:**
 
@@ -406,8 +409,8 @@ The natural follow-up to `/recap` and `/tdd-session`.
    ```
 5. Ask: `What do you want to add?`
 6. Parse the answer for `#word` tag tokens. Strip them; the remainder is the content.
-   For each new tag (not already linked in the note's tag-link line): run
-   `tag-note.sh --vault VAULT --tag topic` to ensure the stub exists, then append
+   For each new tag (not already linked in the note's tag-link line): check if
+   `@tags/@{topic}.md` exists; create it if not. Append
    `[@topic](@tags/@topic.md)` to the note's tag-link line using Edit.
 7. Compose the addition:
    ```markdown
@@ -432,7 +435,7 @@ The natural follow-up to `/recap` and `/tdd-session`.
 
 **Invocation:** `/obsidian-search [#tag ...] [keyword ...]`
 **Model-invocable:** `true` — Claude retrieves past context autonomously.
-**Allowed tools:** `Read Glob Grep Bash(bash:*) AskUserQuestion`
+**Allowed tools:** `Read Glob Grep Bash(bash:*)`
 
 **Search model:**
 
@@ -476,56 +479,10 @@ The natural follow-up to `/recap` and `/tdd-session`.
 
 ## Shared Scripts
 
-All scripts live at `~/.claude/skills/obsidian/scripts/`.
-
-### `vault.sh`
-
-Resolves and validates the vault path.
-
-```
-Usage: bash ~/.claude/skills/obsidian/scripts/vault.sh
-Output: absolute vault path on stdout
-Exit non-zero + error message on failure
-```
-
-Logic: check `$OBSIDIAN_VAULT` → check `.claude/obsidian-vault` (project-local) →
-check `~/.claude/obsidian-vault` (global) → validate path exists and contains
-`.obsidian/` → print path.
-
-### `tag-note.sh`
-
-Ensures a tag-note exists.
-
-```
-Usage:
-  bash ~/.claude/skills/obsidian/scripts/tag-note.sh --vault PATH --tag TOPIC
-    → creates @tags/@{topic}.md if absent; prints its path
-    → exit 0 always (idempotent)
-```
-
-### `slug.sh`
-
-Converts a human-readable title to a kebab-case slug. Not used for note
-filenames (which use plain spaces). Reserved for future skills that need
-a URL-safe identifier.
-
-```
-Usage: bash ~/.claude/skills/obsidian/scripts/slug.sh "My Note Title"
-Output: my-note-title
-```
-
-### `search.sh`
-
-Multi-field grep search with ranked results.
-
-```
-Usage: bash ~/.claude/skills/obsidian/scripts/search.sh --vault PATH --query QUERY [--limit N]
-Output: lines of: SCORE\tFILE\tSNIPPET
-```
-
-`SCORE` is an integer: +2 for each keyword term matched in the filename or summary
-line, +1 for each term matched elsewhere in the body. Results sorted descending by
-score; newest ID first as tiebreaker.
+**Status: Deferred.** Shared scripts (`vault.sh`, `tag-note.sh`, `slug.sh`, `search.sh`)
+were originally planned to centralize common logic. After implementing all four core
+skills, the decision was made to inline the logic in each skill instead. Scripts may
+be revisited if duplication becomes a maintenance burden.
 
 ---
 
@@ -535,7 +492,7 @@ score; newest ID first as tiebreaker.
 |-------|-------|-----------|
 | `obsidian-vault` | `true` | setup skill, always user-triggered |
 | `obsidian-capture` | `true` | always explicitly triggered by the user |
-| `obsidian-update` | `false` | always human-driven |
+| `obsidian-update` | `true` | always human-driven |
 | `obsidian-search` | `false` | Claude retrieves vault context autonomously |
 
 ---
@@ -544,10 +501,10 @@ score; newest ID first as tiebreaker.
 
 | Skill | Tools |
 |-------|-------|
-| `obsidian-vault` | `Read Glob Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion` |
-| `obsidian-capture` | `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion` |
-| `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion` |
-| `obsidian-search` | `Read Glob Grep Bash(bash:*) AskUserQuestion` |
+| `obsidian-vault` | `Read Glob Bash(mkdir:*) Bash(bash:*) Write` |
+| `obsidian-capture` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
+| `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit` |
+| `obsidian-search` | `Read Glob Grep Bash(bash:*)` |
 
 ---
 
@@ -575,7 +532,7 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh` | ⬜ Not started |
+| 1 | **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh` | ⏸ Deferred — all skills inline their logic |
 | 2 | **`obsidian-vault`** — must work before any other skill; validates the entire setup | ✅ Done (`skills/obsidian-vault/SKILL.md`) |
 | 3 | **`obsidian-capture`** — validates ID generation and tag-note flow | ✅ Done (`skills/obsidian-capture/SKILL.md`) |
 | 4 | **`obsidian-search`** — tag and keyword search; results surface IDs for use with `obsidian-update` | ✅ Done (`skills/obsidian-search/SKILL.md`) |

@@ -4,7 +4,7 @@ description: Use this skill to configure and initialize an Obsidian vault for th
 argument-hint: "[vault-path]"
 disable-model-invocation: true
 when_to_use: Use before any obsidian-* skill when the vault is not yet configured; invoke when a skill reports "Obsidian vault not configured"; use when setting up a new or existing Obsidian vault for the obsidian skill family.
-allowed-tools: Read Glob Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion
+allowed-tools: Read Glob Bash(mkdir:*) Bash(bash:*) Write
 ---
 
 Configure and initialize an Obsidian vault for the obsidian skill family. Works with existing vaults and creates new ones. Run once before using any other obsidian-* skill.

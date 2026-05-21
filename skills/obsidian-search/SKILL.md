@@ -6,7 +6,7 @@ description: >
   to retrieve vault context autonomously before starting a task.
 argument-hint: "[#tag ...] [keyword ...]"
 disable-model-invocation: false
-allowed-tools: Read Glob Grep Bash(bash:*) AskUserQuestion
+allowed-tools: Read Glob Grep Bash(bash:*)
 when_to_use: >
   Invoke when the user runs /obsidian-search, or when Claude needs to check the
   vault for prior context on a topic. Accepts #tag filters, keyword terms, or both.

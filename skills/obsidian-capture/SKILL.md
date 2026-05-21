@@ -6,7 +6,7 @@ description: >
   context from the current session to the vault as a structured note.
 argument-hint: "[#tag ...] <hint> [#tag ...]"
 disable-model-invocation: true
-allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write AskUserQuestion
+allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write
 when_to_use: >
   Invoke when the user explicitly runs /obsidian-capture to persist session
   context, findings, or decisions into their Obsidian vault.
@@ -78,14 +78,18 @@ Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
 Using HINT and current session context, identify relevant tags from the
 existing list not already in TAGS.
 
-If suggestions exist, ask:
+If suggestions exist, print (numbering each tag from 1):
 ```
-Suggested tags: #tag1 #tag2 — add?
+Suggested tags: 1) #tag1  2) #tag2 — add?
 (a) Add all
 (b) Pick — reply with numbers: 1 2 ...
 (c) Skip
 ```
-On (a): add all to TAGS. On (b): add only selected. On (c): continue.
+Wait for the user's reply.
+On (a): add all suggestions to TAGS.
+On (b): parse the reply for space-separated numbers (1-based). Add the
+  corresponding tags to TAGS.
+On (c): continue.
 For each newly added tag not yet on disk, write its stub as in Step 5.
 
 ## Step 7 — ID collision check
