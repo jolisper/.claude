@@ -1,0 +1,112 @@
+---
+name: obsidian-update
+description: >
+  Use this skill to append content to an existing Obsidian note by its ID.
+  Invoke when the user runs /obsidian-update to add findings, decisions, or
+  context to a previously captured note. Use /obsidian-search to find the ID first.
+argument-hint: "<id>"
+disable-model-invocation: true
+allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit AskUserQuestion
+when_to_use: >
+  Invoke when the user explicitly runs /obsidian-update with a note ID to append
+  content. Typically follows /recap, /tdd-session, or /obsidian-search.
+---
+
+Append content to an existing Obsidian note identified by its Zettelkasten ID.
+
+## Step 1 — Resolve vault path
+
+Check in order, stopping at the first match. Set VAULT to the resolved path.
+
+1. Run `bash -c 'printf "%s" "$OBSIDIAN_VAULT"'` — if non-empty, VAULT = that value.
+2. Read `.claude/obsidian-vault.json` in the current directory. If present and
+   has a `vault` field, VAULT = that value.
+3. Read `~/.claude/obsidian-vault.json`. If present and has a `vault` field,
+   VAULT = that value.
+4. If VAULT is still unset, print and stop:
+   ```
+   Obsidian vault not configured. Set it up with one of:
+
+     export OBSIDIAN_VAULT="/path/to/your/vault"
+
+   Or run /obsidian-vault to configure interactively.
+
+   Then re-invoke this skill.
+   ```
+
+## Step 2 — Validate argument
+
+If `$ARGUMENTS` does not match `^\d{12}[a-z]?$`, report:
+```
+Expected a note ID (e.g. 202605111430). Use /obsidian-search to find one.
+```
+and stop.
+
+## Step 3 — Locate note
+
+Use Grep to search `{VAULT}` for a line matching `^id: {$ARGUMENTS}`.
+
+- If found: set NOTE_PATH to the matching file.
+- If not found: report `No note found with ID {$ARGUMENTS}.` and stop.
+
+## Step 4 — Show context
+
+Read NOTE_PATH. Extract the `# Heading` and the last 5 non-empty lines of content.
+
+Display:
+```
+Updating: {filename}  (id: {id})
+...
+Last content: "{last meaningful line}"
+```
+
+## Step 5 — Ask what to add
+
+Ask: `What do you want to add?`
+
+Parse the answer for `#[a-zA-Z][a-zA-Z0-9_-]*` tokens. Normalize to lowercase.
+Store as NEW_TAGS. The remainder is CONTENT.
+
+## Step 6 — Update tag-link line
+
+For each tag in NEW_TAGS:
+
+1. Check if `](@tags/@{tag}.md)` already appears in NOTE_PATH. If yes: skip.
+2. Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
+   Write `# @{tag}` to `{VAULT}/@tags/@{tag}.md`.
+   On failure: report the error and stop.
+3. Append `[@{tag}](@tags/@{tag}.md)` to the tag-link line using Edit:
+   - If the note has a tag-link line (a line containing `](@tags/`): append to it.
+   - If no tag-link line exists: insert one as a new line immediately after
+     the `# Heading` line.
+
+## Step 7 — Compose addition
+
+Run `date +%Y-%m-%d` → TODAY.
+
+Addition to append:
+```markdown
+
+---
+
+{TODAY} — {CONTENT}
+```
+
+## Step 8 — Append and update frontmatter
+
+Append the addition to the end of NOTE_PATH using Edit.
+
+Read the current `date:` value from the note's frontmatter. Replace it with
+`date: {TODAY}` using Edit.
+
+## Step 9 — Confirm
+
+```
+Updated → {filename}  (id: {id})
+```
+
+## Failure contract
+
+- **Edit fails:** report the error, print CONTENT to the conversation so
+  nothing is lost, and stop. Never silently discard the user's content.
+- **Tag stub write fails:** report the error and stop before modifying the note.
