@@ -343,8 +343,13 @@ body. Tags can appear at the start, end, or middle of the argument string.
    Add only confirmed tags. Run `tag-note.sh` for any confirmed tag that doesn't exist yet.
 6. ID collision check: Grep vault root `*.md` files for `^id: {ID}` in frontmatter.
    If found, append next available letter suffix (`a`, `b`, ...) until unique.
-7. Derive filename from the full hint text: `{hint}.md` — plain spaces, no ID prefix
-   (e.g. `Rebates architecture decision.md`).
+7. Derive a **TITLE** from the hint and session context — a short, coherent,
+   properly capitalized title that describes what the note is about. The hint is
+   a spotlight, not the literal title. Do not repeat information already expressed
+   by the tags — the title should complement them, not restate them.
+   Example: hint `all 4 core skills implemented` + tag `#obsidian-skill-family`
+   → title `Core Skills Complete` (not `Obsidian Skill Family — Core Skills Complete`).
+   Derive **FILENAME** from TITLE: `{TITLE}.md` — plain spaces, no ID prefix.
 8. Compose the note from session context, using the hint as a spotlight — capture only
    what the hint points to, not the full session. The note must be self-contained: a
    reader with no session context should understand it fully. Include code snippets,
@@ -356,7 +361,7 @@ body. Tags can appear at the start, end, or middle of the argument string.
    date: {YYYY-MM-DD}
    ---
 
-   # {full hint text}
+   # {TITLE}
 
    {tag-link line: [@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)}
 

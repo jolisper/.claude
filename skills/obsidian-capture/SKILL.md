@@ -94,10 +94,20 @@ Use Grep to search `{VAULT}` for the line `^id: {ID}` in frontmatter.
 If any file matches: append the next available letter suffix (`a`, `b`, ...)
 and repeat until no match is found. Use the first available value as ID.
 
-## Step 8 — Derive filename
+## Step 8 — Derive title and filename
+
+Synthesize a **TITLE**: a short, coherent, properly capitalized title that
+describes what the note is about. Use HINT and session context as input —
+do not use the hint verbatim. The hint is a spotlight, not the title text.
+
+Do not repeat information already expressed by TAGS — the title should
+complement the tags, not restate them.
+
+Example: HINT `all 4 core skills implemented` + TAGS `[obsidian-skill-family]`
+→ TITLE `Core Skills Complete` (not `Obsidian Skill Family — Core Skills Complete`)
 
 ```
-FILENAME = {HINT}.md
+FILENAME = {TITLE}.md
 ```
 
 Strip any characters invalid in filenames (`/ : ? * \ " < > |`). Collapse
@@ -118,7 +128,7 @@ id: {ID}
 date: {DATE}
 ---
 
-# {HINT}
+# {TITLE}
 
 [@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)
 
