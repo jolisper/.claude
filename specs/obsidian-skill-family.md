@@ -62,6 +62,17 @@ Advantages over `#tags`:
 - The tag itself can have content (a description, related links)
 - Works with the `bases` core plugin for filtered views
 
+### Tag token syntax (skill input)
+
+Skills accept `#word` tokens in their arguments to specify tags. The rules:
+
+- **Valid characters:** letters, digits, hyphens, underscores — `[a-zA-Z0-9_-]+`
+- **Case:** normalized to lowercase before use (`#Rebate` → `rebate` → `@tags/@rebate.md`)
+- **Multi-word tags:** use hyphens — `#rebate-service` is one tag, maps to `@tags/@rebate-service.md`
+- **Boundary:** a `#` followed by a character outside the valid set is not a tag token (e.g. `#1` is not a tag if the first char after `#` is a digit — digits are allowed only after the first letter character... actually digits are fine: `#q1` is valid, but a bare `#123` is not — the token must start with a letter)
+
+To keep it simple: a tag token matches `#[a-zA-Z][a-zA-Z0-9_-]*`.
+
 ### Obsidian Bases (core plugin, enabled)
 
 Bases is Obsidian's built-in database view. It renders notes as a table and filters
@@ -299,30 +310,34 @@ Ensures the vault is in the correct state and gives a clear green light when don
 
 ### `obsidian-capture`
 
-**Purpose:** Captures session context as a note. `$ARGUMENTS` is a hint or instruction
-— not the literal note content. Claude reads the hint, draws on session context, and
-composes the note body. `@tags` in the hint become tag-note references. No questions asked.
+**Purpose:** Captures session context as a note. `$ARGUMENTS` is a mix of an optional
+set of `#tag` tokens (anywhere in the string) and a mandatory hint. Claude strips the
+tags, uses the remainder as the hint, draws on session context, and composes the note
+body. Tags can appear at the start, end, or middle of the argument string.
 
-**Invocation:** `/obsidian-capture <hint>`
+**Invocation:** `/obsidian-capture [#tag ...] <hint> [#tag ...]`
 **Model-invocable:** `false` — always explicitly triggered by the user.
-**Allowed tools:** `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write`
+**Allowed tools:** `Read Glob Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write AskUserQuestion`
 
 **Protocol:**
 
 1. Resolve vault path. On failure: show setup message and stop.
-2. Run `date +%Y%m%d%H%M` for the Zettelkasten ID and `date +%Y-%m-%d` for frontmatter.
-3. Parse `$ARGUMENTS` for `@word` tokens — these are **explicit tags**.
+2. Parse `$ARGUMENTS` for `#word` tokens — these are **explicit tags**. Strip them;
+   the remainder is the **hint**. If the hint is empty (i.e. `$ARGUMENTS` was blank or
+   contained only `#tag` tokens), ask: `What should this note capture?` Apply the same
+   tag-parsing to the answer: extract any `#word` tokens as additional explicit tags,
+   use the remainder as the hint.
+3. Run `date +%Y%m%d%H%M` for the Zettelkasten ID and `date +%Y-%m-%d` for frontmatter.
 4. For each explicit tag: run `tag-note.sh --vault VAULT --tag topic`.
    The script creates `@tags/@topic.md` if it doesn't exist. No confirmation needed.
 5. Glob `@tags/` to see all existing tags. Using the hint and session context, identify
    any additional relevant tags. If found, present them for confirmation:
    ```
-   Suggested tags: @tdd @java — add? (y/n or pick: 1 2)
+   Suggested tags: #tdd #java — add? (y/n or pick: 1 2)
    ```
    Add only confirmed tags. Run `tag-note.sh` for any confirmed tag that doesn't exist yet.
-6. Strip `@word` tokens from `$ARGUMENTS`, then derive filename:
-   `{ID} {first 6 words of stripped content}.md` — title portion uses plain
-   spaces (e.g. `202605111430 Rebates architecture decision.md`).
+6. Derive filename from the hint: `{ID} {first 6 words of hint}.md` — title portion
+   uses plain spaces (e.g. `202605111430 Rebates architecture decision.md`).
 7. Collision check: if `{ID}.md` prefix already exists in vault root, append next
    available letter suffix to the ID (`a`, `b`, ...) until unique.
 8. Compose the note from session context, using the hint as a spotlight — capture only
@@ -397,16 +412,20 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
    Last content: "commission rate is applied after tax deduction"
    ```
 4. Ask: `What do you want to add?`
-5. Compose the addition:
+5. Parse the answer for `#word` tag tokens. Strip them; the remainder is the content.
+   For each new tag (not already linked in the note's tag-link line): run
+   `tag-note.sh --vault VAULT --tag topic` to ensure the stub exists, then append
+   `[@topic](@tags/@topic.md)` to the note's tag-link line using Edit.
+6. Compose the addition:
    ```markdown
 
    ---
 
    {YYYY-MM-DD} — {user's content}
    ```
-6. Append to the end of the note using Edit.
-7. Update the `date:` frontmatter to today.
-8. Confirm: `Updated → {filename}.md`
+7. Append to the end of the note using Edit.
+8. Update the `date:` frontmatter to today.
+9. Confirm: `Updated → {filename}.md`
 
 **Failure contract:**
 - If Edit fails: report the error, print the content the user wanted to add so
@@ -418,14 +437,14 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 
 **Purpose:** Search the vault and surface relevant notes.
 
-**Invocation:** `/obsidian-search <query>`
+**Invocation:** `/obsidian-search [#tag ...] [keyword ...]`
 **Model-invocable:** `true` — Claude retrieves past context autonomously.
 **Allowed tools:** `Read Glob Grep Bash(bash:*) AskUserQuestion`
 
 **Search model:**
 
-- `@word` tokens in the query are **tag filters**; remaining words are the **keyword**.
-- **Tag filter:** strip the leading `@` from each tag token, then Grep all content notes
+- `#word` tokens in the query are **tag filters**; remaining words are the **keyword**.
+- **Tag filter:** strip the leading `#` from each tag token, then Grep all content notes
   for `](@tags/@{topic}` to collect the matching note set. Multiple tags are combined
   with OR (union) — a note is included if it links to any of the specified tags.
 - **Keyword filter:** applied within the tag-filtered set (or across the full vault if
@@ -436,7 +455,7 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 **Protocol:**
 
 1. Resolve vault path. On failure: setup message and stop.
-2. Parse `$ARGUMENTS`: split into `@word` tag tokens and remaining keyword string.
+2. Parse `$ARGUMENTS`: split into `#word` tag tokens and remaining keyword string.
 3. **Build the candidate set:**
    - If tags present: Grep all content notes at vault root for each tag pattern
      `](@tags/@{topic}`; union the results.
@@ -458,7 +477,7 @@ fuzzy title search. The natural follow-up to `/recap` and `/tdd-session`.
 8. On selection: Read and print the full note. Ask: `(b) Back  (x) Exit`
 
 **When no results:** report "No notes found for `{query}`." and suggest
-`/obsidian-capture @{topic} ...` to create a first entry on that topic.
+`/obsidian-capture #{topic} ...` to create a first entry on that topic.
 
 ---
 
@@ -612,14 +631,14 @@ and how granular each entry should be.
 
 Points that need a decision before implementation begins.
 
-~~1. **`@tags` in title derivation**~~ — `@word` tokens are input syntax for tagging and
+~~1. **`#tags` in title derivation**~~ — `#word` tokens are input syntax for tagging and
    are stripped before deriving the filename and heading title.
 
 ~~2. **`obsidian-update` in autonomous mode**~~ — `model-invocable` set to `false`;
    skill is always human-driven.
 
 ~~3. **Tag match grep pattern**~~ — resolved as part of the search model redesign.
-   Tags are parsed separately from the query string; `@` is stripped before building
+   Tags are parsed separately from the query string; `#` is stripped before building
    the grep pattern. Multiple tags use OR. See updated search protocol.
 
 ~~4. **Tag suggestion mechanism**~~ — resolved. Claude globs `@tags/` and uses session
