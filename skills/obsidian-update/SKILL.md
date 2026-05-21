@@ -4,7 +4,7 @@ description: >
   Use this skill to append content to an existing Obsidian note by its ID.
   Invoke when the user runs /obsidian-update to add findings, decisions, or
   context to a previously captured note. Use /obsidian-search to find the ID first.
-argument-hint: "<id>"
+argument-hint: "<id> [hint]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit
 when_to_use: >
@@ -36,9 +36,12 @@ value. If the field is absent or VAULT came from the env var, default LANG to `e
    Then re-invoke this skill.
    ```
 
-## Step 2 — Validate argument
+## Step 2 — Parse and validate argument
 
-If `$ARGUMENTS` does not match `^\d{12}[a-z]?$`, report:
+Extract the first whitespace-delimited token from `$ARGUMENTS` as **ID**.
+The remainder (if any) is the **HINT**.
+
+If ID does not match `^\d{12}[a-z]?$`, report:
 ```
 Expected a note ID (e.g. 202605111430). Use /obsidian-search to find one.
 ```
@@ -46,10 +49,10 @@ and stop.
 
 ## Step 3 — Locate note
 
-Use Grep to search `{VAULT}` for a line matching `^id: {$ARGUMENTS}`.
+Use Grep to search `{VAULT}` for a line matching `^id: {ID}`.
 
 - If found: set NOTE_PATH to the matching file.
-- If not found: report `No note found with ID {$ARGUMENTS}.` and stop.
+- If not found: report `No note found with ID {ID}.` and stop.
 
 ## Step 4 — Show context
 
@@ -64,10 +67,10 @@ Last content: "{last meaningful line}"
 
 ## Step 5 — Ask what to add
 
-Ask: `What do you want to add?`
+If HINT is non-empty, use it directly. Otherwise ask: `What do you want to add?`
 
-Parse the answer for `#[a-zA-Z][a-zA-Z0-9_-]*` tokens. Normalize to lowercase.
-Store as NEW_TAGS. The remainder is CONTENT.
+Parse the answer (or HINT) for `#[a-zA-Z][a-zA-Z0-9_-]*` tokens. Normalize to
+lowercase. Store as NEW_TAGS. The remainder is CONTENT.
 
 ## Step 6 — Update tag-link line
 

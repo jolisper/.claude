@@ -406,7 +406,7 @@ body. Tags can appear at the start, end, or middle of the argument string.
 **Purpose:** Add content to an existing note, identified by its Zettelkasten ID.
 The natural follow-up to `/recap` and `/tdd-session`.
 
-**Invocation:** `/obsidian-update <id>`
+**Invocation:** `/obsidian-update <id> [hint]`
 **Model-invocable:** `false` — always human-driven.
 **Allowed tools:** `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit`
 
@@ -414,9 +414,10 @@ The natural follow-up to `/recap` and `/tdd-session`.
 
 1. Resolve vault path and read `language` from the config (default `en` if absent).
    Store as **LANG**. On vault failure: show setup message and stop.
-2. Validate `$ARGUMENTS` matches `^\d{12}[a-z]?$`. If not: report
+2. Extract the first whitespace-delimited token as **ID**; remainder is **HINT**.
+   If ID does not match `^\d{12}[a-z]?$`: report
    "Expected a note ID (e.g. 202605111430). Use /obsidian-search to find one." and stop.
-3. Grep all `*.md` files at vault root for `^id: {$ARGUMENTS}` in frontmatter.
+3. Grep all `*.md` files at vault root for `^id: {ID}` in frontmatter.
    - If found: use that file.
    - If not found: report "No note found with ID `{id}`." and stop.
 4. Read the selected note. Show its title and last 5 lines as context:
@@ -425,8 +426,8 @@ The natural follow-up to `/recap` and `/tdd-session`.
    ...
    Last content: "commission rate is applied after tax deduction"
    ```
-5. Ask: `What do you want to add?`
-6. Parse the answer for `#word` tag tokens. Strip them; the remainder is the content.
+5. If HINT is non-empty, use it directly; otherwise ask: `What do you want to add?`
+6. Parse the answer (or HINT) for `#word` tag tokens. Strip them; the remainder is the content.
    For each new tag (not already linked in the note's tag-link line): check if
    `@tags/@{topic}.md` exists; create it if not. Append
    `[@topic](@tags/@topic.md)` to the note's tag-link line using Edit.
