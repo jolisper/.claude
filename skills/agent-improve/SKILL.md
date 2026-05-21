@@ -14,9 +14,6 @@ when_to_use: >
   file path, or asks why an agent isn't behaving correctly. Also surfaces
   automatically when editing files in .claude/agents/ or agents/.
 effort: high
-paths:
-  - ".claude/agents/**/*.md"
-  - "agents/**/*.md"
 ---
 
 ## Phase 1: Locate the agent

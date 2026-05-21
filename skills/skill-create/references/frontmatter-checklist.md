@@ -15,7 +15,7 @@
 - `model`: include when the skill should run on a specific model (`haiku` for read-only/lookup skills; omit to inherit the session model)
 - `effort`: include when reasoning depth matters (`low`/`medium`/`high`/`max`; `high` for analysis or drafting skills)
 - `context`: `inline` (default) for interactive skills with confirmation gates; `fork` for isolated, non-interactive runs
-- `paths`: include glob patterns when the skill has a natural file-context trigger (e.g. `**/SKILL.md`)
+- `paths`: ⚠ Do not use — skills with `paths` do not appear in the slash command list (confirmed broken in Claude Code)
 - `skills`: include comma-separated skill names to preload when the skill orchestrates other skills
 - `hooks`: include session-scoped lifecycle hooks when pre-flight validation or post-action verification adds value
 
