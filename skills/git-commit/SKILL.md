@@ -1,11 +1,12 @@
 ---
 name: git-commit
 description: >
-  Use this skill when the user wants to stage and commit changes. Invoke for
-  requests like "commit my changes", "make a commit", or "stage and commit".
-  Analyzes unstaged changes, groups them into logical commits, proposes a
-  Conventional Commits message, and confirms before committing.
-disable-model-invocation: true
+  Use this skill when the user explicitly requests to stage and commit changes.
+  Invoke only for direct requests like "commit my changes", "make a commit", or
+  "stage and commit" — never proactively. Analyzes unstaged changes, groups them
+  into logical commits, proposes a Conventional Commits message, and confirms
+  before committing. When invoked by the model (not via /git-commit), treat as
+  --auto: the interactive prompts are meaningless when the model drives both sides.
 allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
 argument-hint: "[--auto]"
 ---
@@ -16,7 +17,7 @@ Stage changes and commit them using a Conventional Commits message. Follow this 
 
 ## Arguments
 
-If `$ARGUMENTS` contains `--auto`: enable auto mode. In auto mode the skill still displays the grouping analysis and proposed message, but proceeds without asking for confirmation at Steps 2 and 5. The sensitive data scan (Step 4) **always runs** — auto mode never bypasses it.
+If `$ARGUMENTS` contains `--auto`, or if this skill was invoked by the model (not via a user-typed `/git-commit`): enable auto mode. In auto mode the skill still displays the grouping analysis and proposed message, but proceeds without asking for confirmation at Steps 2 and 5. The sensitive data scan (Step 4) **always runs** — auto mode never bypasses it.
 
 ## Step 1 — Pre-flight check
 

@@ -7,9 +7,9 @@ description: >
   stale worktrees". Context-aware: adapts behavior when invoked from inside a
   worktree.
 disable-model-invocation: true
-argument-hint: "[add <branch> [path] | list | remove <branch> | prune | close [<branch>] [--force]]"
-allowed-tools: Bash(git worktree:*) Bash(git rev-parse:*) Bash(git branch:*) Bash(git log:*) Bash(git status:*) Bash(git merge:*) Bash(git -C:*) Read
-skills: git-merge
+argument-hint: "[add <branch> [path] | list | remove <branch> | prune | close [<branch>]]"
+allowed-tools: Bash(git worktree:*) Bash(git rev-parse:*) Bash(git branch:*) Bash(git log:*) Bash(git status:*) Bash(git merge:*) Bash(git -C:*) Bash(lsof:*) Bash(printf:*) Read
+skills: git-merge, git-commit
 when_to_use: >
   Invoke when the user wants to add, list, remove, prune, or close out a git
   worktree, or asks about managing multiple checkouts of a repository.
@@ -17,10 +17,18 @@ effort: high
 ---
 
 Full worktree lifecycle management. Enforces a linear-history policy: `close`
-merges via fast-forward only and rejects unpushed branches (unless `--force`).
+merges via fast-forward only.
 
 **Rule**: Never use `&&`, `||`, or pipes. One command per Bash call.
 `git -C <path>` is explicitly permitted for targeting specific worktrees.
+
+**Rule**: `lsof` on macOS exits with code 1 even when it finds results (permission
+errors from other users' processes). Treat exit code 1 as normal — check only
+whether stdout is non-empty to determine if a session is active.
+
+**Session detection**: filter `lsof` to meaningful processes only — shells and
+known agents. Use this exact command:
+`lsof -a -d cwd -c claude -c zsh -c bash -c fish -c sh -c cursor -c windsurf -c codex -c aider -c opencode -c gemini +d <path>`
 
 ## Context detection (runs before every subcommand)
 
@@ -76,10 +84,14 @@ Stop on (b).
 
 **Step 3 — Create**
 
-- Existing branch: `git worktree add <path> <branch>`
-- New branch: `git worktree add -b <branch> <path>`
+For new branches only: capture `BASE_BRANCH` = `git rev-parse --abbrev-ref HEAD`
+before creating the worktree.
 
-On non-zero exit: show the git error and stop.
+- Existing branch: `git worktree add <path> <branch>`
+- New branch: `git worktree add -b <branch> <path>`, then
+  `git -C <path> branch --set-upstream-to <BASE_BRANCH> <branch>`
+
+On non-zero exit of any command: show the git error and stop.
 
 **Step 4 — Confirm**
 ```
@@ -97,28 +109,33 @@ Worktree created:
 3. `git worktree list --porcelain` — parse each blank-line-separated block:
    extract `worktree <path>`, `HEAD <sha>`, and `branch <refname>` or `detached`.
 4. For each worktree: `git -C <path> status --short` — non-empty: dirty; empty: clean.
-5. For each non-main worktree (skip detached HEAD): `git log <MAIN_BRANCH>..<branch> --oneline`
-   — non-empty: ahead; empty: synced.
+5. For each non-main worktree (skip detached HEAD):
+   - `git branch --format '%(upstream:short)' --list <branch>` → if non-empty: `DIVERGE_REF=<upstream>`, no fallback marker.
+   - Otherwise: `DIVERGE_REF=<MAIN_BRANCH>`, set fallback marker.
+   - `git log <DIVERGE_REF>..<branch> --oneline` — non-empty: ahead; empty: synced.
+6. For each worktree: run the session detection command (see Rules) with `<path>` — non-empty stdout: session active.
 
 Display with aligned columns. Compute column widths from the actual data:
 - **W1** = longest branch name across all worktrees
 - **W2** = longest path across all worktrees (after replacing `$HOME` with `~`)
 
+Replace `$HOME` with `~`. Show first 7 sha chars. Build `<status>` per row:
+- Main worktree: `dirty` or `clean`; no divergence label; append `, session` if active.
+- Non-main worktrees: `dirty/clean, ahead/synced`; if fallback was used, append ` vs <MAIN_BRANCH>` after the divergence label; append `, session` if active.
+- Detached HEAD: `detached HEAD`; append `, session` if active.
+
+Emit each row with `printf`, using `%-W1s` and `%-W2s` to pad columns exactly:
+- Non-current: `printf "    %-W1s  %-W2s  %s  (%s)\n" "<branch>" "<path>" "<sha7>" "<status>"`
+- Current:     `printf "  * %-W1s  %-W2s  %s  (%s)\n" "<branch>" "<path>" "<sha7>" "<status>"`
+
+Example output:
 ```
 Worktrees:
 
-  * main           ~/.claude                          4b7fd0a  (dirty)
-    bolson-ravine  ~/.warp/worktrees/.claude/branch   bc2501b  (dirty, synced)
-    feat/auth      ~/projects/myapp-feat-auth         a3f91d2  (clean, ahead)
+    main           ~/.claude                                cb13978  (dirty, session)
+  * bolson-ravine  ~/.warp/worktrees/.claude/bolson-ravine  3caa860  (clean, ahead vs main, session)
+    feat/auth      ~/projects/myapp-feat-auth               a3f91d2  (clean, ahead)
 ```
-
-Format each row as: `  <marker> <branch padded to W1>  <path padded to W2>  <sha>  <status>`
-where `<marker>` is `*` for the current worktree and ` ` otherwise.
-
-Replace `$HOME` with `~`. Show first 7 sha chars.
-- Main worktree: show `(dirty)` or `(clean)` only — divergence against itself is meaningless.
-- Non-main worktrees: show `(dirty, ahead)`, `(clean, ahead)`, `(dirty, synced)`, or `(clean, synced)`.
-- Detached HEAD: show `(detached HEAD)` — skip divergence check.
 
 ---
 
@@ -157,25 +174,35 @@ Replace `$HOME` with `~`. Show first 7 sha chars.
 
 1. `git branch --list main` → non-empty: `MAIN_BRANCH=main`, else `MAIN_BRANCH=master`.
 2. `git worktree list --porcelain` — collect all non-main worktrees.
-3. For each: `git log <MAIN_BRANCH>..<branch> --oneline`. Empty → synced.
+3. For each:
+   - `git branch --format '%(upstream:short)' --list <branch>` → if non-empty: `DIVERGE_REF=<upstream>`, no fallback marker.
+   - Otherwise: `DIVERGE_REF=<MAIN_BRANCH>`, set fallback marker.
+   - `git log <DIVERGE_REF>..<branch> --oneline`. Empty → synced.
 4. If no synced worktrees: stop.
 5. For each synced worktree: `git -C <path> status --short`.
-   - Empty → **clean + synced** (prunable)
-   - Non-empty → **dirty + synced** (warn before removing)
-6. If `IN_WORKTREE=true` and the current branch is synced, mark it "(current — skipping)"
-   and exclude it. If all candidates were skipped: stop.
-7. Show candidates grouped:
+   - Empty → **clean + synced**
+   - Non-empty → **dirty + synced**
+6. For each synced worktree: run the session detection command (see Rules) with `<path>`.
+   - Non-empty stdout → **blocked** (active session — move out of the prunable candidates regardless of dirty/clean state).
+7. If `IN_WORKTREE=true` and the current branch is synced, mark it "(current — skipping)"
+   and exclude it. If all candidates were skipped or blocked: stop.
+8. Show candidates grouped (omit a group if empty). When fallback was used for a branch,
+   append `vs <MAIN_BRANCH>` after the divergence label:
    ```
    Prunable worktrees:
 
-     <branch>  <path>  (clean, synced)
+     <branch>  <path>  (clean, synced)            ← upstream set
+     <branch>  <path>  (clean, synced vs main)    ← no upstream, fallback applied
 
    Prunable with uncommitted changes:
 
-     <branch>  <path>  (dirty, synced)
+     <branch>  <path>  (dirty, synced vs main)
+
+   Blocked — active session:
+
+     <branch>  <path>  (clean, synced, session)
    ```
-   Omit a group header if that group is empty.
-8. Ask based on which groups are present:
+9. Ask based on which prunable groups are present (blocked group is never offered for removal):
 
    *Only clean+synced:*
    ```
@@ -191,7 +218,7 @@ Replace `$HOME` with `~`. Show first 7 sha chars.
    (b) Cancel
    ```
 
-   *Both groups:*
+   *Both clean+synced and dirty+synced:*
    ```
    (a) Remove clean only
    (b) Remove all (including dirty)
@@ -200,10 +227,10 @@ Replace `$HOME` with `~`. Show first 7 sha chars.
 
    Stop on Cancel.
 
-9. For each approved worktree: `git worktree remove <path>`.
-   On non-zero exit: show the error and continue to the next — do not abort the batch.
-10. `git worktree prune`.
-11. "Removed N worktree(s)."
+10. For each approved worktree: `git worktree remove <path>`.
+    On non-zero exit: show the error and continue to the next — do not abort the batch.
+11. `git worktree prune`.
+12. "Removed N worktree(s)." If any were blocked: "N worktree(s) skipped — active session detected."
 
 ---
 
@@ -222,23 +249,54 @@ No step auto-rolls back a previous one.
    - No branch name and `CURRENT` is `main`/`master` → ask:
      "Which branch do you want to close out?"
 3. `git branch --list <TARGET>` — empty: "Branch `<TARGET>` not found." Stop.
-4. `git branch --list main` — non-empty: `MAIN_BRANCH=main`, else `MAIN_BRANCH=master`.
+4. Detect `MERGE_TARGET`:
+   - `git branch --format '%(upstream:short)' --list <TARGET>` → if non-empty, use it silently.
+   - Otherwise: `git branch --list main` → non-empty: `FALLBACK=main`, else `FALLBACK=master`.
+     Show:
+     ```
+     No upstream set for `<TARGET>` — defaulting merge target to `<FALLBACK>`.
+     (a) Merge into <FALLBACK>
+     (b) Choose a different target
+     (c) Cancel
+     ```
+     On (b): ask "Merge into which branch?" and use the answer as `MERGE_TARGET`.
+     Stop on (c).
 5. Set `CLOSING_FROM_INSIDE = (IN_WORKTREE=true AND TARGET == CURRENT)`.
-6. Unpushed commits check — skip if `--force` is in `$ARGUMENTS`:
-   `git log origin/<TARGET>..<TARGET> --oneline`
-   If non-empty:
+6. Dirty check — find the worktree path for `TARGET`:
+   *Normal mode:* `git worktree list --porcelain` → find block for `refs/heads/<TARGET>` → extract path.
+   *Closing-from-inside mode:* path = current working directory (`git rev-parse --show-toplevel`).
+   Run `git -C <path> status --short`. If non-empty:
+
+   *Closing-from-inside mode:*
    ```
-   ✗ Branch <TARGET> has N unpushed commit(s). Push before closing out.
-     Run /git-push, then retry. Use --force to override.
+   The worktree has uncommitted changes:
+   <status lines>
+
+   (a) Commit changes and continue
+   (b) Proceed without committing (changes will be lost)
+   (c) Cancel
    ```
-   Stop.
+   On (a): Read `~/.claude/skills/git-commit/SKILL.md` and follow its full protocol
+   with `--auto`. After the commit completes, continue to Step 2.
+   Stop on (c).
+
+   *Normal mode:*
+   ```
+   The worktree at <path> has uncommitted changes:
+   <status lines>
+
+   Switch to that worktree and commit before closing out.
+   (a) Proceed anyway (changes will be lost)
+   (b) Cancel
+   ```
+   Stop on (b).
 
 **Step 2 — Merge**
 
 *Normal mode* (`CLOSING_FROM_INSIDE=false`):
 
-Run `git rev-parse --abbrev-ref HEAD`. If not `MAIN_BRANCH`:
-"Switch to `<MAIN_BRANCH>` before closing out." Stop.
+Run `git rev-parse --abbrev-ref HEAD`. If not `MERGE_TARGET`:
+"Switch to `<MERGE_TARGET>` before closing out." Stop.
 
 Read `~/.claude/skills/git-merge/SKILL.md` and follow its full protocol with
 `<TARGET>` as the source branch. (git-merge uses only git Bash commands and Read;
@@ -247,12 +305,12 @@ or the user cancels: stop. Do not proceed to Step 3.
 
 *Closing-from-inside mode* (`CLOSING_FROM_INSIDE=true`):
 
-1. `git -C <MAIN_REPO> rev-parse --abbrev-ref HEAD` — must equal `MAIN_BRANCH`.
-   If not: "The main repo is on `<other>`, not `<MAIN_BRANCH>`. Switch it first." Stop.
-2. `git -C <MAIN_REPO> log <MAIN_BRANCH>..<TARGET> --oneline` — show commits.
+1. `git -C <MAIN_REPO> rev-parse --abbrev-ref HEAD` — must equal `MERGE_TARGET`.
+   If not: "The main repo is on `<other>`, not `<MERGE_TARGET>`. Switch it first." Stop.
+2. `git -C <MAIN_REPO> log <MERGE_TARGET>..<TARGET> --oneline` — show commits.
 3. Confirm:
    ```
-   Merge <TARGET> → <MAIN_BRANCH>  [fast-forward]
+   Merge <TARGET> → <MERGE_TARGET>  [fast-forward]
    (a) Merge
    (b) Cancel
    ```
@@ -312,7 +370,7 @@ On non-zero exit at any point: show the error and stop.
 
 ```
 Close-out complete:
-  ✓ Merged <TARGET> into <MAIN_BRANCH> (fast-forward)
+  ✓ Merged <TARGET> into <MERGE_TARGET> (fast-forward)
   ✓ Deleted branch <TARGET>
   ✓ Removed worktree <path>
 ```
