@@ -573,7 +573,7 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 | 1 | **Shared scripts** — `vault.sh`, `slug.sh`, `tag-note.sh`, `search.sh` | ⬜ Not started |
 | 2 | **`obsidian-vault`** — must work before any other skill; validates the entire setup | ✅ Done (`skills/obsidian-vault/SKILL.md`) |
 | 3 | **`obsidian-capture`** — validates ID generation and tag-note flow | ✅ Done (`skills/obsidian-capture/SKILL.md`) |
-| 4 | **`obsidian-search`** — tag and keyword search; results surface IDs for use with `obsidian-update` | ⬜ Not started |
+| 4 | **`obsidian-search`** — tag and keyword search; results surface IDs for use with `obsidian-update` | ✅ Done (`skills/obsidian-search/SKILL.md`) |
 | 5 | **`obsidian-update`** — ID-only note lookup via frontmatter grep | ⬜ Not started |
 
 ---
