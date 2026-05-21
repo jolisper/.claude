@@ -17,12 +17,13 @@ required.
 Notes are identified by a **Zettelkasten timestamp** prefix (`YYYYMMDDHHmm`) embedded
 in the filename. This gives every note a stable, unique ID independent of its title.
 
-The family has **4 core skills**:
+The family has **5 core skills**:
 
 | Tier | Skill | Purpose |
 |------|-------|---------|
 | Setup | `obsidian-vault` | Configure and initialize a vault; validate readiness |
 | Write | `obsidian-capture` | Capture session context as a note, guided by a hint |
+| Write | `obsidian-literal` | Save content verbatim as a note — no synthesis or rewriting |
 | Write | `obsidian-update` | Add content to an existing note by ID or fuzzy name |
 | Read | `obsidian-search` | Search and surface relevant vault notes |
 
@@ -187,7 +188,9 @@ The backlinks panel provides all the content.
 ```markdown
 ---
 id: YYYYMMDDHHmm
-date: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+type: capture
 ---
 
 # Title
@@ -210,19 +213,32 @@ the content warrants it.
 
 ## Frontmatter Schema
 
-Every note created by the skill family uses exactly two frontmatter fields:
+Every note created by the skill family uses four frontmatter fields:
 
 ```yaml
 ---
 id: YYYYMMDDHHmm
-date: YYYY-MM-DD
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+type: capture
 ---
 ```
 
-Nothing else. No `title`, `type`, `status`, `source`, or `tags` fields.
 `id` is the stable unique identifier used by skills to look up notes.
-`date` enables Bases views and chronological sorting. Everything else is
-expressed through wikilinks and headings.
+`created` records when the note was first written — never changed after creation.
+`updated` records the last time content was appended — set equal to `created` at creation, updated by `obsidian-update`.
+`type` identifies the origin skill and enables filtered Bases views.
+
+### Note types
+
+| Type | Skill | Description |
+|------|-------|-------------|
+| `capture` | `obsidian-capture` | Hint-based snapshot synthesized from session context |
+| `literal` | `obsidian-literal` *(planned)* | Verbatim content — no synthesis or rewriting |
+| `journal` | `obsidian-journal` *(planned)* | Work day or session summary |
+| `log` | `obsidian-log` *(planned)* | Automatic hook-driven activity log |
+
+`obsidian-update` appends content to a note but never changes its `type`.
 
 Tag-notes in `@tags/` have no frontmatter at all.
 
@@ -378,7 +394,9 @@ body. Tags can appear at the start, end, or middle of the argument string.
    ```markdown
    ---
    id: {YYYYMMDDHHmm}
-   date: {YYYY-MM-DD}
+   created: {YYYY-MM-DD}
+   updated: {YYYY-MM-DD}
+   type: capture
    ---
 
    # {TITLE}
@@ -441,7 +459,7 @@ The natural follow-up to `/recap` and `/tdd-session`.
    {YYYY-MM-DD} — {content in LANG}
    ```
 8. Append to the end of the note using Edit.
-9. Update the `date:` frontmatter to today.
+9. Update the `updated:` frontmatter to today.
 10. Confirm: `Updated → {filename}.md  (id: {id})`
 
 **Failure contract:**
@@ -524,6 +542,7 @@ be revisited if duplication becomes a maintenance burden.
 |-------|-------|
 | `obsidian-vault` | `Read Glob Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-capture` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
+| `obsidian-literal` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit` |
 | `obsidian-search` | `Read Glob Grep Bash(bash:*)` |
 
@@ -559,6 +578,8 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 | 4 | **`obsidian-search`** — tag and keyword search; results surface IDs for use with `obsidian-update` | ✅ Done (`skills/obsidian-search/SKILL.md`) |
 | 5 | **`obsidian-update`** — ID-only note lookup via frontmatter grep | ✅ Done (`skills/obsidian-update/SKILL.md`) |
 | 6 | **Language config** — `language` field in config JSON; vault setup asks for ISO code; capture and update write and translate to vault language | ✅ Done (`obsidian-vault` Step 6–7; `obsidian-capture` Step 1+9; `obsidian-update` Step 1+7) |
+| 7 | **`type` frontmatter field** — `obsidian-capture` writes `type: capture`; planned types for future skills: `literal`, `journal`, `log` | ✅ Done (`obsidian-capture` Step 9) |
+| 8 | **`obsidian-literal`** — verbatim capture skill; body preserved exactly as provided; only title synthesized | ✅ Done (`skills/obsidian-literal/SKILL.md`) |
 
 ---
 
@@ -566,9 +587,12 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 
 ### `obsidian-literal`
 
-Captures input exactly as-is, with no Claude interpretation or composition. The raw
-content of `$ARGUMENTS` becomes the note body. For when the user wants to preserve
-a snippet, quote, code block, or raw thought verbatim. Format TBD.
+**Status: implemented** (`skills/obsidian-literal/SKILL.md`)
+
+Saves content verbatim as a note — no synthesis, no rewriting, no translation of
+the body. Tags are parsed from `$ARGUMENTS`; the remainder (or an interactive
+answer if `$ARGUMENTS` is tag-only) becomes the note body exactly as provided.
+Only the title is synthesized by the skill (in vault LANG). `type: literal`.
 
 ### `obsidian-log`
 

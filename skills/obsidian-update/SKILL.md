@@ -105,8 +105,8 @@ Addition to append:
 
 Append the addition to the end of NOTE_PATH using Edit.
 
-Read the current `date:` value from the note's frontmatter. Replace it with
-`date: {TODAY}` using Edit.
+Read the current `updated:` value from the note's frontmatter. Replace it with
+`updated: {TODAY}` using Edit.
 
 ## Step 9 — Confirm
 
