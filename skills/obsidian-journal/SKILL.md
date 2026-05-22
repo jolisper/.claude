@@ -95,6 +95,18 @@ after the tag-link line (the summary).
 If TODAY_NOTES is non-empty, use these notes as additional source material
 when composing the synthesis sections (Steps 9 and 10).
 
+## Step 7b — Read today's session log
+
+Check whether `{VAULT}/Log {DATE}.md` exists.
+
+If it exists: Read the file. Extract all session entries — each entry starts with a
+`## HH:MM` heading and includes the **User:** and **Assistant:** lines that follow it.
+Store the list of entries as **LOG_ENTRIES**. Each entry should capture: the time,
+the session title (ai-title after the `—` if present), the user message, and the
+assistant response snippet.
+
+If the file does not exist or is empty: set LOG_ENTRIES to empty and continue.
+
 ## Step 8 — Suggest additional tags
 
 Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
@@ -128,11 +140,14 @@ and repeat until no match is found. Use the first available value as ID.
 Write all synthesized prose and section headers in **LANG**.
 DAY_NOTE must be preserved verbatim — never translated, rephrased, or altered.
 
-Synthesize a **SUMMARY**: 2–3 sentences distilling the day from DAY_NOTE and
-TODAY_NOTES. Write in LANG.
+Synthesize a **SUMMARY**: 2–3 sentences distilling the day from DAY_NOTE,
+TODAY_NOTES, and LOG_ENTRIES. Write in LANG.
 
-Synthesize the structured sections from DAY_NOTE and TODAY_NOTES:
-- **Eventos / Events** — what happened, key activities (bullet list)
+Synthesize the structured sections from DAY_NOTE, TODAY_NOTES, and LOG_ENTRIES.
+LOG_ENTRIES are especially useful for the Events and Decisions sections — each
+entry shows what was worked on in that session and what Claude helped with.
+- **Eventos / Events** — what happened, key activities (bullet list); draw from
+  LOG_ENTRIES session titles and user messages to name specific sessions and topics
 - **Decisiones / Decisions** — decisions made and their rationale (bullet list)
 - **Reflexiones / Reflections** — what worked, what didn't, lessons (bullet list)
 - **Próximos pasos / Next steps** — open items, tomorrow's priorities (bullet list)

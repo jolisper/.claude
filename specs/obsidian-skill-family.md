@@ -17,7 +17,7 @@ required.
 Notes are identified by a **Zettelkasten timestamp** prefix (`YYYYMMDDHHmm`) embedded
 in the filename. This gives every note a stable, unique ID independent of its title.
 
-The family has **6 core skills**:
+The family has **6 core skills** plus one background hook:
 
 | Tier | Skill | Purpose |
 |------|-------|---------|
@@ -27,6 +27,7 @@ The family has **6 core skills**:
 | Write | `obsidian-journal` | End-of-day debrief: literal day note + structured synthesis |
 | Write | `obsidian-update` | Add content to an existing note by ID or fuzzy name |
 | Read | `obsidian-search` | Search and surface relevant vault notes |
+| Hook | `obsidian-log` | Stop hook: appends each session turn to the day's log note |
 
 ---
 
@@ -237,7 +238,7 @@ type: capture
 | `capture` | `obsidian-capture` | Hint-based snapshot synthesized from session context |
 | `literal` | `obsidian-literal` | Verbatim content — no synthesis or rewriting |
 | `journal` | `obsidian-journal` | End-of-day debrief: literal day note + structured synthesis |
-| `log` | `obsidian-log` *(planned)* | Automatic hook-driven activity log |
+| `log` | `obsidian-log` | Automatic hook-driven activity log |
 
 `obsidian-update` appends content to a note but never changes its `type`.
 
@@ -517,6 +518,41 @@ The natural follow-up to `/recap` and `/tdd-session`.
 
 ---
 
+### `obsidian-log`
+
+**Purpose:** Stop hook that automatically appends each session turn to the daily log note.
+Not a user-invoked skill — runs as a background shell script registered in `settings.json`.
+
+**Trigger:** `Stop` hook (`skills/obsidian-log/scripts/stop-hook.sh`)
+**Model-invocable:** N/A — hook, not a skill
+**Allowed tools:** N/A
+
+**Protocol:**
+
+1. Read Stop hook payload from stdin; extract `transcript_path`, `last_assistant_message`,
+   and `session_id`.
+2. Resolve vault path from `~/.claude/obsidian-vault.json`. Exit silently if not configured.
+3. Search the transcript backward for the last `type=ai-title` entry; store as `AI_TITLE`.
+4. Search the transcript backward for the last `type=user` entry where `content` is a plain
+   string (not array/tool result); store as `USER_MESSAGE`. If none found, exit 0.
+5. Determine today's log note: `$VAULT/Log YYYY-MM-DD.md`. Create it with frontmatter and
+   `@obsidian-log` tag link if it does not exist.
+6. Ensure `$VAULT/@tags/@obsidian-log.md` stub exists.
+7. Append entry:
+   ```markdown
+   ## HH:MM — `<session_id[:8]>` [— <AI_TITLE>]
+
+   **User:** <USER_MESSAGE[:400]>
+
+   **Assistant:** <last_assistant_message[:600]>
+   ```
+   The AI title is included only if present.
+8. Update `updated:` frontmatter to today's date.
+
+**Failure contract:** exit 0 on any error — the hook must never block the session.
+
+---
+
 ## Shared Scripts
 
 **Status: Deferred.** Shared scripts (`vault.sh`, `tag-note.sh`, `slug.sh`, `search.sh`)
@@ -534,6 +570,7 @@ be revisited if duplication becomes a maintenance burden.
 | `obsidian-capture` | `true` | always explicitly triggered by the user |
 | `obsidian-update` | `true` | always human-driven |
 | `obsidian-search` | `false` | Claude retrieves vault context autonomously |
+| `obsidian-log` | N/A | Stop hook — not a skill, runs as a shell script |
 
 ---
 
@@ -547,6 +584,7 @@ be revisited if duplication becomes a maintenance burden.
 | `obsidian-journal` | `Read Glob Grep Bash(date:*) Bash(mkdir:*) Bash(bash:*) Write` |
 | `obsidian-update` | `Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit` |
 | `obsidian-search` | `Read Glob Grep Bash(bash:*)` |
+| `obsidian-log` | N/A — shell script, no skill tools |
 
 ---
 
@@ -583,6 +621,8 @@ Knowledge base: run /obsidian-update <note> to log this session's progress.
 | 7 | **`type` frontmatter field** — `obsidian-capture` writes `type: capture`; planned types for future skills: `literal`, `journal`, `log` | ✅ Done (`obsidian-capture` Step 9) |
 | 8 | **`obsidian-literal`** — verbatim capture skill; body preserved exactly as provided; only title synthesized | ✅ Done (`skills/obsidian-literal/SKILL.md`) |
 | 9 | **`obsidian-journal`** — end-of-day debrief; literal day note preserved verbatim + structured synthesis from day note and today's vault notes; one per day | ✅ Done (`skills/obsidian-journal/SKILL.md`) |
+| 10 | **`obsidian-log`** — Stop hook; appends each turn (ai-title + user + assistant) to a daily log note; reads transcript JSON directly, no Haiku subprocess | ✅ Done (`skills/obsidian-log/scripts/stop-hook.sh`) |
+| 11 | **journal + log integration** — `obsidian-journal` Step 7b reads `Log {DATE}.md` and feeds session entries into synthesis (Events, Decisions) | ✅ Done (`skills/obsidian-journal/SKILL.md`) |
 
 ---
 
@@ -615,35 +655,48 @@ already exists, the skill stops and directs the user to `/obsidian-update`.
   (sections with no content are omitted)
 - Bullets may link to today's vault notes as source references
 
-**Future data source:** once `obsidian-log` is implemented, its per-session log
-notes will serve as additional synthesis input for the journal.
+**Log integration:** `obsidian-journal` reads today's `Log {DATE}.md` (Step 7b)
+and uses its session entries as additional synthesis input — especially for the
+Events and Decisions sections.
 
 ### `obsidian-log`
 
-Automatically records session activity as a single Obsidian note, built incrementally
-as the session progresses. The goal: a user reading the log after a long day should
-have a clear picture of what happened, from a list of short summaries.
+**Status: implemented** (`skills/obsidian-log/scripts/stop-hook.sh`)
+
+Automatically appends each session turn to a daily log note in the vault. The goal:
+a user reading the log after a long day can see every conversation turn — what was
+asked and what Claude answered — grouped by session and labeled with the AI title.
 
 **Trigger:** `Stop` hook — fires once per turn, after Claude finishes responding.
-The hook is deterministic and runs outside the session agent (no context leak).
+The script runs outside the session agent (no context leak, no tool calls).
 
-**Mechanism:** the `Stop` hook invokes a separate `claude` CLI process using
-**Claude Haiku** (fast, low cost — ~$0.000005 per turn). That process receives
-the turn context (user prompt + Claude response) and appends a one-line summary
-to the session log note. The session agent is unaware of the log.
+**Mechanism:** the hook reads the Claude Code transcript JSON directly (no Haiku
+subprocess). It extracts:
+- `ai-title` — session title generated by Claude Code (searched backward through the transcript)
+- Last `type=user` entry where `content` is a plain string (the user's typed message)
+- `last_assistant_message` from the Stop hook payload
 
-**One note per session:** a new timestamped note is created at session start
-(`SessionStart` hook) and appended to on each turn.
+**One note per day:** the log file is `$VAULT/Log YYYY-MM-DD.md`. Created on first
+turn of the day; subsequent turns append to the same file.
 
-**Loggable events** (what Haiku looks for in each turn):
-- Decisions made (architectural, design, product)
-- Problems encountered and how they were resolved
-- Files or components created or significantly modified
-- Skills or tools used
-- Open questions left unresolved
+**Entry format:**
 
-**Still TBD:** note format and structure, exact Haiku prompt, note naming convention,
-and how granular each entry should be.
+```markdown
+## HH:MM — `<session-id>` — <ai-title>
+
+**User:** <last user message, up to 400 chars>
+
+**Assistant:** <last assistant message, up to 600 chars>
+```
+
+If the AI title is not yet available (can happen on the very first turn of a new
+session), the header omits it: `## HH:MM — \`<session-id>\``.
+
+**Skip condition:** turns where no plain-string user message is found are skipped
+(sub-agent completions, hook-only turns, etc.).
+
+**Frontmatter:** the daily log note uses `type: log` and `@obsidian-log` tag.
+The `updated:` field is refreshed on every append.
 
 ---
 
@@ -673,9 +726,9 @@ Points that need a decision before implementation begins.
    Note must be self-contained. Fixed structure: title, tags, summary, Context, Content.
    Length and additional sections follow the content.
 
-~~7. **`obsidian-log`**~~ — core decisions made. One note per session, incremental writes
-   via `Stop` hook, Haiku writes one-line summaries per turn. Note format, Haiku prompt,
-   and entry granularity still TBD — tracked in Phase 2 spec.
+~~7. **`obsidian-log`**~~ — implemented. One note per day (not per session), incremental
+   writes via `Stop` hook. Transcript read directly (no Haiku subprocess). Entry format:
+   timestamped heading with ai-title + session ID, user message, assistant message snippet.
 
 ~~8. **Config file format**~~ — resolved. Both project-local and global config files use
    JSON: `{"vault": "/absolute/path"}`. Plain-text format rejected in favor of JSON for
