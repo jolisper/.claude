@@ -26,9 +26,9 @@ merges via fast-forward only.
 errors from other users' processes). Treat exit code 1 as normal — check only
 whether stdout is non-empty to determine if a session is active.
 
-**Session detection**: filter `lsof` to meaningful processes only — shells and
-known agents. Use this exact command:
-`lsof -a -d cwd -c claude -c zsh -c bash -c fish -c sh -c cursor -c windsurf -c codex -c aider -c opencode -c gemini +d <path>`
+**Session detection**: a worktree is considered active only when a known agent
+process has its cwd there. Use this exact command:
+`lsof -a -d cwd -c claude -c cursor -c windsurf -c codex -c aider -c opencode -c gemini +d <path>`
 
 ## Context detection (runs before every subcommand)
 
