@@ -173,6 +173,55 @@ If a merge commit is intentional (release branch, external integration), the
 user runs `git merge` directly in the terminal. The skill family does not
 support that workflow.
 
+### D12 — `add` records the base branch as upstream
+
+When creating a new worktree branch, the skill captures the current branch
+(`BASE_BRANCH`) before creating the worktree, then sets it as the new branch's
+local upstream: `git branch --set-upstream-to <BASE_BRANCH> <branch>`. This
+records the intended merge target without external metadata, enabling `list`,
+`prune`, and `close` to resolve the correct divergence reference and merge
+target automatically.
+
+### D13 — Divergence is computed per-branch against the upstream, with fallback to main
+
+`list` and `prune` determine each branch's divergence reference from its local
+upstream (`git branch --format '%(upstream:short)' --list <branch>`). If no
+upstream is set (branch created outside this skill), the fallback is
+`MAIN_BRANCH` and a `vs main` marker is appended to the status so the user can
+see the fallback was applied. This makes divergence semantically accurate: a
+branch tracking `develop` shows ahead/synced relative to `develop`, not `main`.
+
+### D14 — Session detection uses agent process filtering
+
+A worktree is considered active only when a known agent process has its cwd in
+that directory. Detection uses:
+
+```
+lsof -a -d cwd -c claude -c cursor -c windsurf -c codex -c aider -c opencode -c gemini +d <path>
+```
+
+Shells (`zsh`, `bash`, etc.) are excluded — a terminal sitting in the directory
+is not a meaningful active session (its cwd is inherited at launch and may be
+stale). Agent processes directly indicate intentional work in that directory.
+Active-session worktrees are flagged with `, session` in `list` and blocked from
+removal in `prune`.
+
+### D15 — `close` detects merge target from upstream
+
+Before merging, `close` reads the target branch's local upstream to determine
+`MERGE_TARGET`. If an upstream is set, it is used silently. If not, the user is
+prompted to confirm the `main`/`master` fallback or choose a different target.
+This generalizes `close` to support feature-branch workflows where the merge
+target is not always `main`.
+
+### D16 — `close` pre-flights uncommitted changes before any destructive step
+
+Before the merge step, `close` checks for uncommitted changes in the target
+worktree. In closing-from-inside mode, the user can commit via `git-commit
+--auto` and continue. In normal mode, the user is directed to switch to the
+worktree and commit first. This prevents data loss from close-outs that start
+with a dirty worktree.
+
 ---
 
 ## Skill: `git-worktree`
@@ -188,9 +237,10 @@ Bash(git rev-parse:*)
 Bash(git branch:*)
 Bash(git log:*)
 Bash(git status:*)
-Bash(git checkout:*)
-Bash(git fetch:*)
 Bash(git merge:*)
+Bash(git -C:*)
+Bash(lsof:*)
+Bash(printf:*)
 Read
 ```
 (`close` additionally inherits the allowed tools from `git-merge` for the merge step.)
@@ -235,8 +285,14 @@ Show the resolved path and ask: `Create worktree at <path>? (y/n)`
 
 **Step 3 — Create**
 
+For new branches only: capture `BASE_BRANCH` = current branch before creating the worktree.
+
 - Existing branch: `git worktree add <path> <branch>`
-- New branch: `git worktree add -b <branch> <path>`
+- New branch: `git worktree add -b <branch> <path>`, then
+  `git -C <path> branch --set-upstream-to <BASE_BRANCH> <branch>`
+
+This sets the local upstream so `list`, `prune`, and `close` can resolve the correct
+divergence reference and merge target automatically (D12).
 
 **Step 4 — Confirm**
 
@@ -255,22 +311,25 @@ Worktree created:
    `branch <refname>` (or `detached`).
 3. Determine `MAIN_BRANCH`: `git branch --list main` → `main`, else `master`.
 4. For each worktree: `git -C <path> status --short` → dirty / clean.
-5. For each non-main worktree (skip detached HEAD): `git log <MAIN_BRANCH>..<branch> --oneline`
-   → non-empty: **ahead**; empty: **synced**.
-6. Display:
+5. For each non-main worktree (skip detached HEAD):
+   - `git branch --format '%(upstream:short)' --list <branch>` → if non-empty: `DIVERGE_REF=<upstream>`, no fallback marker.
+   - Otherwise: `DIVERGE_REF=<MAIN_BRANCH>`, set fallback marker.
+   - `git log <DIVERGE_REF>..<branch> --oneline` → non-empty: **ahead**; empty: **synced**.
+6. For each worktree: run session detection — `lsof -a -d cwd -c claude -c cursor -c windsurf -c codex -c aider -c opencode -c gemini +d <path>` — non-empty stdout: session active.
+7. Display with `printf` for aligned columns (compute column widths from actual data):
 
    ```
    Worktrees:
 
-     * main           ~/projects/myapp              bc2501b  (dirty)
-       feat/auth      ~/projects/myapp-feat-auth    a3f91d2  (dirty, ahead)
-       fix/typo       ~/projects/myapp-fix-typo     c4d83e1  (clean, synced)
+     * main           ~/.claude                                cb13978  (dirty, session)
+       bolson-ravine  ~/.warp/worktrees/.claude/bolson-ravine  3caa860  (clean, ahead vs main, session)
+       feat/auth      ~/projects/myapp-feat-auth               a3f91d2  (clean, ahead)
    ```
 
-   `*` marks the current worktree. Shorten `$HOME` to `~`. Show first 7 SHA chars.
-   - Main worktree: `(dirty)` or `(clean)` only — no divergence label.
-   - Non-main: `(dirty, ahead)`, `(clean, ahead)`, `(dirty, synced)`, or `(clean, synced)`.
-   - Detached HEAD: `(detached HEAD)` — skip divergence check.
+   `*` marks the current worktree. Replace `$HOME` with `~`. Show first 7 SHA chars.
+   - Main worktree: `dirty` or `clean`; no divergence label; append `, session` if active.
+   - Non-main: `dirty/clean, ahead/synced`; if fallback was used, append ` vs <MAIN_BRANCH>` after the divergence label; append `, session` if active.
+   - Detached HEAD: `detached HEAD`; append `, session` if active.
 
 ---
 
@@ -300,12 +359,14 @@ Removes the worktree for the named branch.
 **Step 1 — Remove stale records:** `git worktree prune --verbose`.
 
 **Step 2 — Detect prunable worktrees:**
-For each non-main worktree, compute dirty/clean and ahead/synced (same as `list`).
-A worktree is prunable when it is **synced** (no commits ahead of main).
+For each non-main worktree, compute dirty/clean and ahead/synced using the same upstream
+divergence logic as `list` (upstream if set, fallback to MAIN_BRANCH).
+A worktree is prunable when it is **synced** (no commits ahead of its divergence ref).
 
-Split synced candidates into two groups:
+Split synced candidates into groups:
 - **clean + synced** — safe to remove
 - **dirty + synced** — warn before removing (uncommitted work will be lost)
+- **blocked** — active agent session detected (excluded from removal regardless of state)
 
 Skip the current worktree if `IN_WORKTREE=true`. Show candidates grouped and ask:
 
@@ -315,7 +376,8 @@ Skip the current worktree if `IN_WORKTREE=true`. Show candidates grouped and ask
 | dirty+synced only | (a) Remove anyway / (b) Cancel |
 | both | (a) Remove clean only / (b) Remove all including dirty / (c) Cancel |
 
-Remove approved worktrees one by one; on error continue to the next. Then `git worktree prune`.
+Blocked worktrees are shown but never offered for removal. Remove approved worktrees one
+by one; on error continue to the next. Then `git worktree prune`.
 
 ---
 
@@ -330,43 +392,55 @@ worktree being closed.
 1. Run `git rev-parse --abbrev-ref HEAD` — note current branch (`CURRENT`).
 2. Resolve the target branch (`TARGET`):
    - If `$ARGUMENTS` supplies a branch name: use it.
-   - If no branch name and `IN_WORKTREE=true` and `CURRENT` is not main/master:
-     default to `CURRENT` (most natural use case from inside a worktree). Tell
-     the user: "Closing current branch: `<CURRENT>`."
-   - If no branch name and `IN_WORKTREE=false` and `CURRENT` is not main/master:
-     default to `CURRENT`.
+   - If no branch name and `CURRENT` is not main/master: default to `CURRENT`.
+     Tell the user: "Closing current branch: `<CURRENT>`."
    - If no branch name and `CURRENT` is main/master: ask "Which branch do you
      want to close out?"
 3. Verify target exists: `git branch --list <TARGET>`. Stop if not found.
-4. Determine main branch: `git branch --list main` → `main`, else `master`.
+4. Detect `MERGE_TARGET` (D15):
+   - `git branch --format '%(upstream:short)' --list <TARGET>` → if non-empty, use it silently.
+   - Otherwise: `git branch --list main` → non-empty: `FALLBACK=main`, else `FALLBACK=master`. Show:
+     ```
+     No upstream set for `<TARGET>` — defaulting merge target to `<FALLBACK>`.
+     (a) Merge into <FALLBACK>
+     (b) Choose a different target
+     (c) Cancel
+     ```
+     On (b): ask which branch, use the answer as `MERGE_TARGET`. Stop on (c).
 5. Determine execution mode:
    - `CLOSING_FROM_INSIDE = (IN_WORKTREE=true AND TARGET == CURRENT)`
+6. Dirty check (D16): find the worktree path for `TARGET` and run `git -C <path> status --short`.
+   If non-empty:
+   - *Closing-from-inside mode:* offer `(a) Commit changes and continue / (b) Proceed without committing (changes will be lost) / (c) Cancel`. On (a): follow `git-commit --auto` protocol, then continue. Stop on (c).
+   - *Normal mode:* direct the user to switch to the worktree and commit first. Offer `(a) Proceed anyway (changes will be lost) / (b) Cancel`. Stop on (b).
 
 **Step 2 — Merge**
 
 *Normal mode* (`CLOSING_FROM_INSIDE=false`):
 
-Read `~/.claude/skills/git-merge/SKILL.md` and follow its full protocol to
-merge `<TARGET>` into `<main-branch>`. The `--ff-only` default applies.
+Verify current branch is `MERGE_TARGET`; if not, stop: "Switch to `<MERGE_TARGET>` before closing out."
+Read `~/.claude/skills/git-merge/SKILL.md` and follow its full protocol to merge `<TARGET>` into `MERGE_TARGET`.
 
 *Closing-from-inside mode* (`CLOSING_FROM_INSIDE=true`):
 
-The current branch is checked out here; `main` lives in `MAIN_REPO`. The merge
-must be performed there.
-
-1. Run `git -C <MAIN_REPO> rev-parse --abbrev-ref HEAD` to confirm `MAIN_REPO`
-   is on `<main-branch>`. If not, stop:
-   "The main repo is on `<other-branch>`, not `<main-branch>`. Switch it to
-   `<main-branch>` before closing out."
-2. Run `git -C <MAIN_REPO> log <main-branch>..<TARGET> --oneline` (commits to
-   be merged) and show them.
-3. Ask: `Merge <TARGET> → <main-branch> [fast-forward]? (y/n)`
-4. On yes: run `git -C <MAIN_REPO> merge --ff-only <TARGET>`.
-5. On failure: surface the error and stop.
+1. Run `git -C <MAIN_REPO> rev-parse --abbrev-ref HEAD` — must equal `MERGE_TARGET`.
+   If not: "The main repo is on `<other>`, not `<MERGE_TARGET>`. Switch it first." Stop.
+2. Run `git -C <MAIN_REPO> log <MERGE_TARGET>..<TARGET> --oneline` — show commits.
+3. Ask:
+   ```
+   Merge <TARGET> → <MERGE_TARGET>  [fast-forward]
+   (a) Merge
+   (b) Cancel
+   ```
+4. On (a): `git -C <MAIN_REPO> merge --ff-only <TARGET>`. On non-zero exit: show error and stop.
 
 **Step 3 — Delete branch**
 
-Show: `Delete branch <TARGET>? (y/n)`
+```
+Delete branch <TARGET>?
+(a) Delete
+(b) Cancel
+```
 
 *Normal mode:* `git branch -d <TARGET>`
 *Closing-from-inside mode:* `git -C <MAIN_REPO> branch -d <TARGET>`
@@ -375,29 +449,31 @@ If the delete fails, surface the error and stop — do not force-delete.
 
 **Step 4 — Remove worktree**
 
-Run `git worktree list --porcelain` (or `git -C <MAIN_REPO> worktree list
---porcelain` in closing-from-inside mode) to find the path for `<TARGET>`.
-If no worktree found, skip this step and say "No worktree found for `<TARGET>` —
-skipping removal."
+Run `git worktree list --porcelain` (or `git -C <MAIN_REPO> worktree list --porcelain`
+in closing-from-inside mode) to find the path for `<TARGET>`.
+If no worktree found, skip and say "No worktree found for `<TARGET>` — skipping removal."
 
 *Normal mode:*
-Show: `Remove worktree at <path>? (y/n)`
-On yes: `git worktree remove <path>`, then `git worktree prune`.
+```
+Remove worktree at <path>?
+(a) Remove
+(b) Cancel
+```
+On (a): `git worktree remove <path>`, then `git worktree prune`.
 
 *Closing-from-inside mode:*
-Warn first:
 ```
 ⚠ Removing this worktree will delete your current working directory (<path>).
-Proceed? (y/n)
+(a) Remove
+(b) Cancel
 ```
-On yes: `git -C <MAIN_REPO> worktree remove <path>`, then
-`git -C <MAIN_REPO> worktree prune`.
+On (a): `git -C <MAIN_REPO> worktree remove <path>`, then `git -C <MAIN_REPO> worktree prune`.
 
 **Step 5 — Summary**
 
 ```
 Close-out complete:
-  ✓ Merged <TARGET> into <main-branch> (fast-forward)
+  ✓ Merged <TARGET> into <MERGE_TARGET> (fast-forward)
   ✓ Deleted branch <TARGET>
   ✓ Removed worktree <path>
 ```
