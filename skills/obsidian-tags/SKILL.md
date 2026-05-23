@@ -132,8 +132,13 @@ the new name to that candidate. Normalize any user-supplied name to lowercase
 and replace spaces with hyphens.
 
 After parsing, if any accepted candidate still uses Claude's proposed name,
-ask once: `Any renames? (e.g. 1 new-name, or press enter to keep all)`.
-Apply any supplied renames. Then proceed.
+ask once:
+```
+Any renames? (e.g. 1 new-name 2 other-name)
+(s) Skip — keep all proposed names
+```
+On (s) or any reply that contains no rename pairs: keep all proposed names and proceed.
+Otherwise apply the supplied renames and proceed.
 
 ## Step 7 — Create tag stubs
 
