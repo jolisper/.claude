@@ -5,6 +5,7 @@
 !.gitignore
 !CLAUDE.md
 !README.md
+!TODO.md
 !settings.template.json
 
 # Allowlist directories and their contents
