@@ -74,18 +74,11 @@ No confirmation needed.
 ## Step 6 — Suggest additional tags
 
 Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
-`.md` suffix to get the existing name list.
+`.md` suffix to get the name list.
 
-Build a **SUGGESTIONS** list from two sources:
-1. **Existing tags:** From the existing name list, identify those relevant to
-   CONTENT, not already in TAGS.
-2. **New tags:** Independently propose up to 3 new tag names based on
-   CONTENT that are not already in TAGS and not in the existing list. Use
-   lowercase, hyphen-separated identifiers (e.g. `voiceink`, `hardware-setup`,
-   `macos-tools`).
+Using CONTENT, identify relevant tags from the existing list not already in TAGS.
 
-Combine both sources into SUGGESTIONS, deduplicating. If SUGGESTIONS is
-non-empty, print (numbering each tag from 1):
+If suggestions exist, print (numbering each tag from 1):
 ```
 Suggested tags: 1) #tag1  2) #tag2 — add?
 (a) Add all
