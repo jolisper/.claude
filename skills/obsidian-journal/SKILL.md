@@ -72,6 +72,17 @@ and stop.
 Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
 Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
 
+Ensure the `@journal` stub exists (managed by this skill):
+Run `bash -c "test -f '{VAULT}/@tags/@journal.md'"`. If non-zero:
+Write to `{VAULT}/@tags/@journal.md`:
+```markdown
+---
+managed-by: obsidian-journal
+---
+
+# @journal
+```
+
 ## Step 6 — Ensure tag stubs exist
 
 For each tag in TAGS:
@@ -109,11 +120,12 @@ If the file does not exist or is empty: set LOG_ENTRIES to empty and continue.
 
 ## Step 8 — Suggest additional tags
 
-Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
-`.md` suffix to get the name list.
+Glob `{VAULT}/@tags/@*.md` to get all existing tags. For each stub, read it
+and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
+suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
-Using DAY_NOTE and TODAY_NOTES context, identify relevant tags from the
-existing list not already in TAGS.
+Using DAY_NOTE and TODAY_NOTES context, identify relevant tags from USER_TAGS
+not already in TAGS.
 
 If suggestions exist, print (numbering each tag from 1):
 ```

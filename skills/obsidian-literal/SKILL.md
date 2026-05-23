@@ -73,10 +73,11 @@ No confirmation needed.
 
 ## Step 6 — Suggest additional tags
 
-Glob `{VAULT}/@tags/@*.md` to get all existing tags. Strip `@` prefix and
-`.md` suffix to get the name list.
+Glob `{VAULT}/@tags/@*.md` to get all existing tags. For each stub, read it
+and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
+suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
-Using CONTENT, identify relevant tags from the existing list not already in TAGS.
+Using CONTENT, identify relevant tags from USER_TAGS not already in TAGS.
 
 If suggestions exist, print (numbering each tag from 1):
 ```

@@ -110,13 +110,13 @@ fi
 # Create note if it doesn't exist
 if [ ! -f "$NOTE" ]; then
     NOTE_ID=$(date '+%Y%m%d%H%M')
-    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@obsidian-log](@tags/@obsidian-log.md)\n' \
+    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@log](@tags/@log.md)\n' \
         "$NOTE_ID" "$DATE" "$DATE" "$DATE" > "$NOTE"
 fi
 
-# Ensure @obsidian-log tag stub exists
-if [ ! -f "$VAULT/@tags/@obsidian-log.md" ]; then
-    printf '# @obsidian-log\n' > "$VAULT/@tags/@obsidian-log.md"
+# Ensure @log tag stub exists (managed by obsidian-log)
+if [ ! -f "$VAULT/@tags/@log.md" ]; then
+    printf -- '---\nmanaged-by: obsidian-log\n---\n\n# @log\n' > "$VAULT/@tags/@log.md"
 fi
 
 # Append the log entry
