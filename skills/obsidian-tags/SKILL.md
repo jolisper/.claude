@@ -176,7 +176,8 @@ For each (tag, note) pair in BACKFILL:
 1. Read the note.
 2. Update the tag-link line using Edit:
    - If the note has a tag-link line (a line containing `](@tags/`): append
-     ` [@{tag}](@tags/@{tag}.md)` to it.
+     ` [@{tag}](@tags/@{tag}.md)` to it. Backfill tags from this skill are
+     always user tags — they go at the end, after any managed tags already present.
    - If no tag-link line exists: insert `[@{tag}](@tags/@{tag}.md)` as a new
      line immediately after the `# Heading` line, followed by a blank line.
 3. Update the `updated:` frontmatter field to TODAY using Edit.

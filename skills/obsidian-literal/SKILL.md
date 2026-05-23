@@ -114,6 +114,9 @@ consecutive spaces to one. Trim leading and trailing spaces.
 
 ## Step 9 — Compose note
 
+When writing the tag-link line, place managed tags (stubs that contain `managed-by:`)
+before user tags.
+
 Note structure:
 ```markdown
 ---

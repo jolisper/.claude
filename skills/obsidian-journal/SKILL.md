@@ -83,6 +83,9 @@ managed-by: obsidian-journal
 # @journal
 ```
 
+Add `journal` to TAGS if not already present — `@journal` is the managed tag for
+journal notes and must always appear on them.
+
 ## Step 6 — Ensure tag stubs exist
 
 For each tag in TAGS:
@@ -170,6 +173,9 @@ Where a bullet references one of TODAY_NOTES, link it:
 If a section has nothing to report, omit it entirely — do not write an empty
 section.
 
+When writing the tag-link line, place managed tags (stubs that contain `managed-by:`)
+before user tags. `@journal` is always first.
+
 Note structure:
 ```markdown
 ---
@@ -181,7 +187,7 @@ type: journal
 
 # Journal {DATE}
 
-[@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)
+[@journal](@tags/@journal.md) [@tag2](@tags/@tag2.md)
 
 {SUMMARY}
 
