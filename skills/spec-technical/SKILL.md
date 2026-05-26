@@ -1,0 +1,139 @@
+---
+name: spec-technical
+description: >
+  Write a TECHNICAL.md plan for a feature by researching the codebase and
+  translating a FUNCTIONAL.md behavioral spec into a grounded implementation plan.
+  Use when the user asks for a technical spec, implementation plan, or TECHNICAL.md.
+  Requires a FUNCTIONAL.md written by spec-functional — stops if none exists.
+disable-model-invocation: true
+argument-hint: "[<id>]"
+allowed-tools: Read Glob Grep AskUserQuestion Write Bash(git rev-parse:*)
+when_to_use: >
+  Invoke when the user asks for a technical spec, implementation plan, TECHNICAL.md,
+  or wants to plan the implementation of a feature that already has a FUNCTIONAL.md.
+  Always run after spec-functional. Stops if no FUNCTIONAL.md exists for the given feature.
+effort: high
+---
+
+Write a `TECHNICAL.md` that translates a `FUNCTIONAL.md` behavioral spec into
+a grounded implementation plan: which parts of the codebase change, what new types or
+interfaces are introduced, how the work is sequenced, and how each behavioral invariant
+from the functional spec will be verified.
+
+Requires a `FUNCTIONAL.md` written by `spec-functional`. Will not proceed without one.
+
+## Steps
+
+**Step 1 — Resolve the project root**
+
+Run `git rev-parse --show-toplevel` to find the project root. All file paths in this
+skill are relative to it. If the command fails (not a git repo), use the current working
+directory and note it in the output.
+
+**Step 2 — Locate the functional spec**
+
+If `$ARGUMENTS` contains an `<id>`, check for `<project-root>/specs/<id>/FUNCTIONAL.md`.
+If `$ARGUMENTS` is empty, ask:
+
+```
+Which feature spec do you want to derive a technical plan for?
+Enter the spec id (directory name under specs/):
+```
+
+Read the FUNCTIONAL.md if found. If no FUNCTIONAL.md exists for the given id, stop:
+
+```
+No FUNCTIONAL.md found at specs/<id>/FUNCTIONAL.md.
+Write the functional spec first with /spec-functional, then re-run /spec-technical.
+```
+
+**Step 3 — Research the codebase**
+
+Use Glob to locate source files at the project root. If no source files are found, stop:
+
+```
+No codebase found at the project root.
+TECHNICAL.md requires an existing codebase to research.
+```
+
+Otherwise, read the codebase to understand:
+
+- The relevant modules, files, and entry points for the feature area.
+- The types, interfaces, or state structures likely to change.
+- The data flow from the consumer surface to the backend and back.
+- Existing patterns in the codebase that the implementation should follow.
+
+Use Read and Grep to inspect key files. Do not guess about existing architecture.
+Reference specific file paths and line numbers in the plan.
+
+If the feature area is unclear from the FUNCTIONAL.md and codebase, ask the user which
+module or directory to start from before proceeding.
+
+**Step 4 — Check for an existing plan**
+
+Read `<project-root>/specs/<id>/TECHNICAL.md`. If it exists, ask:
+
+```
+specs/<id>/TECHNICAL.md already exists. How do you want to proceed?
+(a) Overwrite with a new plan
+(b) Cancel
+```
+
+On (b): stop.
+
+**Step 5 — Draft and write TECHNICAL.md**
+
+Draft the full plan — do not ask questions during this step. Everything needed was
+gathered in Steps 1–3. Write in one pass.
+
+Write to `<project-root>/specs/<id>/TECHNICAL.md`.
+
+If the Write fails: report the error and print the full drafted content to the
+conversation so nothing is lost.
+
+## TECHNICAL.md structure
+
+**Required sections:**
+
+1. **Context** — What's being built, how the current system works in the relevant area,
+   and the most important files with line references. Reference `FUNCTIONAL.md` for
+   consumer-visible behavior rather than restating it. Combine current-state description
+   and code orientation into one grounded section.
+
+2. **Proposed changes** — The implementation plan: which modules change, new types or
+   APIs or state being introduced, data flow, ownership boundaries, and how the design
+   follows existing patterns. Call out tradeoffs explicitly when more than one reasonable
+   path exists.
+
+3. **Testing and validation** — How the implementation will be verified against the
+   functional spec. Reference the numbered Behavior invariants from `FUNCTIONAL.md`
+   directly (e.g. "Invariant 4 — tested by…") rather than restating them. Each important
+   invariant maps to a concrete test or verification step. This is the authoritative
+   testing plan; `FUNCTIONAL.md` intentionally has no Validation section.
+
+**Optional sections** — include only when they add signal; omit the heading if empty:
+
+- **End-to-end flow** — Only when tracing the path through the system reveals something
+  the Proposed changes list doesn't.
+- **Diagram** — Mermaid diagram when visual form explains faster than prose (data flow,
+  state machine, sequence across layers). One or two focused diagrams; omit decorative
+  ones.
+- **Risks and mitigations** — When there are real failure modes, regressions, migration
+  concerns, or rollout hazards.
+- **Follow-ups** — Deferred cleanup or future work worth naming.
+
+## Writing guidance
+
+- Ground the plan in actual codebase structure, not hypothetical architecture.
+- Prefer concrete implementation guidance over generic design language.
+- Reference `FUNCTIONAL.md` for behavior instead of restating it.
+- Each section earns its place; omit rather than pad.
+
+## Length heuristic
+
+- Single-file change with a clear approach: skip or keep under ~40 lines.
+- Multi-module change with some ambiguity: ~80–150 lines.
+- Large cross-cutting change: longer when every section earns its place.
+
+If Context and Proposed changes end up describing the same files and state from
+different angles, collapse them into one section.
