@@ -70,6 +70,9 @@ call covering all gaps:
 Do not ask for information already present in the definition. One question covering all
 gaps is better than several sequential questions.
 
+Each question in the `AskUserQuestion` call must have at least 2 distinct options.
+Do not include preamble or summary entries — every entry must be a real question.
+
 **Step 5 — Ask about design mockups (UI features only)**
 
 If the feature has visual interaction or UI states, ask:
