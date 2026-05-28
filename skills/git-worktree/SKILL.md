@@ -8,7 +8,7 @@ description: >
   worktree.
 disable-model-invocation: true
 argument-hint: "[add <branch> [path] | list | remove <branch> | prune | close [<branch>]]"
-allowed-tools: Bash(git worktree:*) Bash(git rev-parse:*) Bash(git branch:*) Bash(git log:*) Bash(git status:*) Bash(git merge:*) Bash(git -C:*) Bash(lsof:*) Bash(printf:*) Read
+allowed-tools: Bash(git worktree:*) Bash(git rev-parse:*) Bash(git branch:*) Bash(git log:*) Bash(git status:*) Bash(git merge:*) Bash(git -C:*) Bash(lsof:*) Bash(printf:*) Bash(bash:*) Read
 skills: git-merge, git-commit
 when_to_use: >
   Invoke when the user wants to add, list, remove, prune, or close out a git
@@ -68,11 +68,19 @@ List each rule violated and ask for a corrected name. Repeat until all rules pas
 
 If `$ARGUMENTS` contains a path after the branch name, use it directly.
 
-Otherwise derive the default:
+Otherwise:
+
 1. `git rev-parse --show-toplevel` → `<repo-root>`
 2. Last path component of `<repo-root>` → `<repo-name>`
 3. Slugify `<branch>`: replace `/` with `-`, lowercase → `<slug>`
-4. Path = `<repo-root>/../<repo-name>-<slug>`
+
+**2a. Read config** — run `bash ~/.claude/skills/git-worktree/scripts/resolve-worktree-path.sh`:
+- Exit 1 → report the error message from stderr and stop.
+- Exit 0, stdout contains `status=done path=<dir>` → extract `<dir>` as `<BASE>`; derive path: `<BASE>/<repo-name>-<slug>`
+- Exit 0, empty stdout → fall through to 2b.
+
+**2b. Default path** (no config or `worktrees_path` absent/empty):
+- Path = `<repo-root>/../<repo-name>-<slug>`
 
 Show the resolved path and confirm:
 ```
@@ -241,6 +249,11 @@ No step auto-rolls back a previous one.
 
 **Step 1 — Pre-flight**
 
+Check for in-progress git operations:
+- `git rev-parse MERGE_HEAD` — if exit 0: "A merge is in progress — resolve it before closing out." Stop.
+- `git rev-parse CHERRY_PICK_HEAD` — if exit 0: "A cherry-pick is in progress — resolve it before closing out." Stop.
+- `git rev-parse REBASE_HEAD` — if exit 0: "A rebase is in progress — resolve it before closing out." Stop.
+
 1. `git rev-parse --abbrev-ref HEAD` → `CURRENT`.
 2. Resolve `TARGET`:
    - Branch name after `close` in `$ARGUMENTS` → use it.
@@ -278,6 +291,7 @@ No step auto-rolls back a previous one.
    ```
    On (a): Read `~/.claude/skills/git-commit/SKILL.md` and follow its full protocol
    with `--auto`. After the commit completes, continue to Step 2.
+   (git-commit uses only git Bash commands and Read; all required tools are covered by this skill's allowed-tools.)
    Stop on (c).
 
    *Normal mode:*
