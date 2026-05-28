@@ -7,6 +7,11 @@ allowed-tools: Bash(pwd:*) Bash(rm:*) Read Edit Write
 
 Manage Claude Code auto memory entries for the current project — list, select, and edit, remove, archive, or keep each item.
 
+## Critical constraints
+
+- **Never write, create, or update any auto-memory entries** during this skill's execution — do not save observations from memory content you read.
+- **Never modify memory content** unless the user explicitly requests an edit at step 10. Migrate, archive, and remove operations must leave the body text exactly as-is.
+
 ## Steps
 
 1. Run `pwd` to get the current working directory as an absolute path.
@@ -123,7 +128,7 @@ How do you want to proceed?
     1. Derive a filename from the heading: lowercase, spaces and special chars → `_`, collapse multiple `_`, strip leading/trailing `_`, append `.md`. Example: `Architect agent — open decision` → `architect_agent_open_decision.md`.
     2. Infer `type` from content: use `feedback` if the body contains correction or preference language ("always", "never", "don't", "must", "prefer"). Otherwise use `project`.
     3. Derive a `description`: take the first sentence of the body (up to 120 chars). If not available, use the heading text.
-    4. Write the new file to the memory directory using Write:
+    4. Write the new file to the memory directory using Write. Copy the section body **verbatim** — do not add, remove, or change any text in the body:
        ```
        ---
        name: <heading text>
@@ -131,7 +136,7 @@ How do you want to proceed?
        description: <derived description>
        ---
 
-       <section body>
+       <section body — exact copy, no modifications>
        ```
     5. In `MEMORY.md`, replace the entire inline section (the `## <heading>` line plus all body lines up to the next `## ` heading or end of file) with a single link line:
        `- [<heading text>](<filename>) — <description>`
