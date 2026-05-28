@@ -22,6 +22,8 @@ merges via fast-forward only.
 **Rule**: Never use `&&`, `||`, or pipes. One command per Bash call.
 `git -C <path>` is explicitly permitted for targeting specific worktrees.
 
+**Rule**: Never call `AskUserQuestion` — output text menus directly and wait for the user to type a response.
+
 **Rule**: `lsof` on macOS exits with code 1 even when it finds results (permission
 errors from other users' processes). Treat exit code 1 as normal — check only
 whether stdout is non-empty to determine if a session is active.
@@ -244,7 +246,7 @@ Worktrees:
 
 ## close
 
-Full close-out: merge → branch delete → worktree remove. Stops on any failure.
+Full close-out: merge → worktree remove → branch delete (closing-from-inside), or merge → branch delete → worktree remove (normal). Stops on any failure.
 No step auto-rolls back a previous one.
 
 **Step 1 — Pre-flight**
@@ -322,17 +324,32 @@ or the user cancels: stop. Do not proceed to Step 3.
 1. `git -C <MAIN_REPO> rev-parse --abbrev-ref HEAD` — must equal `MERGE_TARGET`.
    If not: "The main repo is on `<other>`, not `<MERGE_TARGET>`. Switch it first." Stop.
 2. `git -C <MAIN_REPO> log <MERGE_TARGET>..<TARGET> --oneline` — show commits.
-3. Confirm:
-   ```
-   Merge <TARGET> → <MERGE_TARGET>  [fast-forward]
-   (a) Merge
-   (b) Cancel
-   ```
-   Stop on (b).
-4. `git -C <MAIN_REPO> merge --ff-only <TARGET>`.
+3. `git -C <MAIN_REPO> merge --ff-only <TARGET>`.
    On non-zero exit: show the error and stop.
 
-**Step 3 — Delete branch**
+**Step 3 — Remove worktree** *(closing-from-inside mode only — git requires worktree removal before the branch can be deleted)*
+
+*Normal mode:* skip to Step 4.
+
+*Closing-from-inside mode:*
+
+`git -C <MAIN_REPO> worktree list --porcelain` — find the block for `refs/heads/<TARGET>`. If not found:
+"No worktree found for `<TARGET>` — skipping removal." Skip to Step 4.
+
+```
+⚠ Removing this worktree will delete your current working directory (<path>).
+(a) Remove
+(b) Cancel
+```
+
+Stop on (b).
+
+Run `git -C <MAIN_REPO> worktree remove <path>`.
+Run `git -C <MAIN_REPO> worktree prune`.
+
+On non-zero exit: show the error and stop.
+
+**Step 4 — Delete branch**
 
 ```
 Delete branch <TARGET>?
@@ -346,41 +363,27 @@ Stop on (b).
 
 On failure: show the error and stop — do not force-delete.
 
-**Step 4 — Remove worktree**
+**Step 5 — Remove worktree** *(normal mode only)*
 
-*Normal mode:* `git worktree list --porcelain`
-*Closing-from-inside mode:* `git -C <MAIN_REPO> worktree list --porcelain`
+*Closing-from-inside mode:* skip to Step 6 (worktree already removed in Step 3).
 
-Find the block for `refs/heads/<TARGET>`. If not found:
-"No worktree found for `<TARGET>` — skipping removal." Skip to Step 5.
+`git worktree list --porcelain` — find the block for `refs/heads/<TARGET>`. If not found:
+"No worktree found for `<TARGET>` — skipping removal." Skip to Step 6.
 
-*Normal mode confirmation:*
 ```
 Remove worktree at <path>?
 (a) Remove
 (b) Cancel
 ```
 
-*Closing-from-inside mode confirmation:*
-```
-⚠ Removing this worktree will delete your current working directory (<path>).
-(a) Remove
-(b) Cancel
-```
-
 Stop on (b).
 
-*Normal mode:*
 Run `git worktree remove <path>`.
 Run `git worktree prune`.
 
-*Closing-from-inside mode:*
-Run `git -C <MAIN_REPO> worktree remove <path>`.
-Run `git -C <MAIN_REPO> worktree prune`.
+On non-zero exit: show the error and stop.
 
-On non-zero exit at any point: show the error and stop.
-
-**Step 5 — Summary**
+**Step 6 — Summary**
 
 ```
 Close-out complete:
@@ -389,4 +392,4 @@ Close-out complete:
   ✓ Removed worktree <path>
 ```
 
-Omit the worktree line if Step 4 was skipped.
+Omit the worktree line if it was skipped.
