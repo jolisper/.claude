@@ -22,6 +22,10 @@ NOTE="$VAULT/Log $DATE.md"
 TRANSCRIPT_PATH=$(printf '%s' "$PAYLOAD" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path',''))" 2>/dev/null)
 SESSION_ID=$(printf '%s' "$PAYLOAD" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('session_id','')[:8])" 2>/dev/null)
 
+# Capture working directory context
+CWD_NAME=$(basename "$(pwd)")
+GIT_BRANCH=$(git branch --show-current 2>/dev/null)
+
 # Extract ai-title from transcript
 AI_TITLE=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
@@ -50,7 +54,9 @@ fi
 USER_MESSAGE=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     USER_MESSAGE=$(python3 -c "
-import json, sys
+import json, sys, re
+def flatten(t):
+    return re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
 path = sys.argv[1]
 try:
     lines = open(path).readlines()
@@ -63,7 +69,7 @@ try:
             if d.get('type') == 'user':
                 content = d.get('message', {}).get('content', '')
                 if isinstance(content, str) and content.strip():
-                    print(content.strip())
+                    print(flatten(content.strip()))
                     break
         except Exception:
             continue
@@ -76,7 +82,9 @@ fi
 LAST_ASSISTANT=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     LAST_ASSISTANT=$(python3 -c "
-import json, sys
+import json, sys, re
+def flatten(t):
+    return re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
 path = sys.argv[1]
 try:
     lines = open(path).readlines()
@@ -92,10 +100,10 @@ try:
                     parts = [b.get('text','') for b in content if b.get('type') == 'text']
                     text = ''.join(parts).strip()
                     if text:
-                        print(text)
+                        print(flatten(text))
                         break
                 elif isinstance(content, str) and content.strip():
-                    print(content.strip())
+                    print(flatten(content.strip()))
                     break
         except Exception:
             continue
@@ -126,8 +134,13 @@ fi
     else
         printf '\n## %s — `%s`\n\n' "$TIMESTAMP" "$SESSION_ID"
     fi
-    printf '**User:** %s\n\n' "$USER_MESSAGE"
-    printf '**Assistant:** %s\n' "$LAST_ASSISTANT"
+    if [ -n "$GIT_BRANCH" ]; then
+        printf '**Cwd:** `%s` · **Branch:** `%s`\n\n' "$CWD_NAME" "$GIT_BRANCH"
+    else
+        printf '**Cwd:** `%s`\n\n' "$CWD_NAME"
+    fi
+    printf '**User:**\n%s\n\n' "$USER_MESSAGE"
+    printf '**Assistant:**\n%s\n' "$LAST_ASSISTANT"
 } >> "$NOTE"
 
 # Update frontmatter updated date
