@@ -2,20 +2,21 @@
 name: obsidian-journal
 description: >
   Use this skill to write an end-of-day journal entry. Invoke when the user
-  runs /obsidian-journal to save a verbatim day note and generate a structured
-  debrief (events, decisions, reflections, next steps) synthesized from the
-  literal input and today's vault notes.
-argument-hint: "[#tag ...] [day note]"
+  runs /obsidian-journal to generate a structured debrief (events, decisions,
+  reflections, next steps) synthesized from the session log, vault notes, and
+  an optional focus hint. Accepts an optional date (default: today) and tags.
+argument-hint: "[YYYY-MM-DD] [#tag ...] [hint]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write
 when_to_use: >
   Invoke when the user explicitly runs /obsidian-journal. Typically at the end
-  of a work day. Creates one note per day — if today's journal already exists,
-  points the user to it and stops.
+  of a work day. Creates one note per day — if a journal for the target date
+  already exists, offers to append an update section.
 ---
 
-Write an end-of-day journal entry. `$ARGUMENTS` is a mix of optional `#tag`
-tokens and the day's literal note. Tags can appear anywhere in the string.
+Write an end-of-day journal entry synthesized from the session log for the target
+date. `$ARGUMENTS` accepts an optional date (YYYY-MM-DD, default: today), optional
+`#tag` tokens, and an optional hint to focus the synthesis.
 
 ## Step 1 — Resolve vault path and language
 
@@ -41,31 +42,72 @@ value. If the field is absent or VAULT came from the env var, default LANG to `e
 
 ## Step 2 — Parse arguments
 
-Extract all tokens matching `#[a-zA-Z][a-zA-Z0-9_-]*` from `$ARGUMENTS`.
-Normalize each to lowercase (strip `#`). Store as **TAGS**.
-The remainder after removing all tag tokens is **DAY_NOTE**.
+`$ARGUMENTS` may contain three optional components in any order:
 
-If DAY_NOTE is empty after stripping:
-  Ask: `What do you want to record for today?`
-  Use the answer verbatim as DAY_NOTE — do not parse tags from it.
-  If DAY_NOTE is still empty: report "A day note is required." and stop.
+1. **Date token** — a string matching `YYYY-MM-DD` (e.g. `2026-05-27`). Extract it as
+   **TARGET_DATE**. If absent, TARGET_DATE is empty.
+2. **Tag tokens** — strings matching `#[a-zA-Z][a-zA-Z0-9_-]*`. Extract all of them as
+   **TAGS** (normalize to lowercase, strip `#`).
+3. **Hint** — the remainder after removing the date token and all tag tokens. Trim
+   whitespace. Store as **HINT**.
+
+`HINT` is a focus directive for journal synthesis — it is **not** stored verbatim in the
+note. If HINT is empty the journal is generated purely from the session log.
 
 ## Step 3 — Generate timestamps
 
 Run `date +%Y%m%d%H%M` → **ID**
 
-Run `date +%Y-%m-%d` → **DATE**
+If TARGET_DATE is non-empty, use it as **DATE**.
+Otherwise run `date +%Y-%m-%d` → **DATE**.
 
 ## Step 4 — One-per-day check
 
 Run `bash -c "test -f '{VAULT}/Journal {DATE}.md'"`.
 
-If the file exists: read its frontmatter to extract the `id:` value. Report:
+If the file does not exist: continue to Step 5.
+
+If the file exists: read its frontmatter to extract the `id:` value. Inform in LANG and ask:
+- Spanish: `Ya existe un journal para {DATE}: Journal {DATE}.md (id: {id}). ¿Querés agregar una actualización?`
+- English: `A journal for {DATE} already exists: Journal {DATE}.md (id: {id}). Add an update?`
+
 ```
-Ya existe un journal para hoy: Journal {DATE}.md  (id: {id})
-Usá /obsidian-update {id} para agregarle contenido.
+(a) Yes
+(b) Cancel
 ```
-and stop.
+
+On (b): stop.
+
+On (a) — **update flow** (skip Steps 5–11 entirely after this):
+
+  If HINT is empty, ask: `What should the update focus on?` and use the reply as HINT.
+
+  Run `date +%H:%M` → **UPDATE_TIME**.
+  Run `date +%Y-%m-%d` → **TODAY**.
+
+  Execute Steps 7 and 7b now to load TODAY_NOTES and LOG_ENTRIES, then continue.
+
+  Synthesize an update using HINT, LOG_ENTRIES, and TODAY_NOTES following the same
+  composition rules as Step 10. Produce only the synthesis sections that have
+  content to report — omit empty ones.
+
+  Compose the update block in LANG:
+  ```markdown
+  ## Update — {DATE} {UPDATE_TIME}
+
+  {synthesis sections — same structure as the main note: Events, Decisions, Reflections, Next steps}
+  ```
+
+  Read the full content of `{VAULT}/Journal {DATE}.md` into **EXISTING_CONTENT**.
+  Replace the `updated: {old_date}` line in the frontmatter with `updated: {TODAY}`.
+  Append the update block after the last line of EXISTING_CONTENT.
+  Write the result back to `{VAULT}/Journal {DATE}.md`.
+
+  Confirm:
+  ```
+  Updated → Journal {DATE}.md  (id: {id})
+  ```
+  Stop.
 
 ## Step 5 — Ensure @tags/ exists
 
@@ -109,7 +151,7 @@ after the tag-link line (the summary).
 If TODAY_NOTES is non-empty, use these notes as additional source material
 when composing the synthesis sections (Steps 9 and 10).
 
-## Step 7b — Read today's session log
+## Step 7b — Read session log for DATE
 
 Check whether `{VAULT}/Log {DATE}.md` exists.
 
@@ -119,7 +161,17 @@ Store the list of entries as **LOG_ENTRIES**. Each entry should capture: the tim
 the session title (ai-title after the `—` if present), the user message, and the
 assistant response snippet.
 
-If the file does not exist or is empty: set LOG_ENTRIES to empty and continue.
+If the file does not exist or is empty:
+  Print: `No session log found for {DATE}.`
+  Ask:
+  ```
+  Continue anyway?
+  (a) Yes — provide a hint
+  (b) Cancel
+  ```
+  On (b): stop.
+  On (a): if HINT is empty, ask `What should the journal focus on?` and use the
+  reply as HINT. Set LOG_ENTRIES to empty.
 
 ## Step 8 — Suggest additional tags
 
@@ -127,7 +179,7 @@ Glob `{VAULT}/@tags/@*.md` to get all existing tags. For each stub, read it
 and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
 suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
-Using DAY_NOTE and TODAY_NOTES context, identify relevant tags from USER_TAGS
+Using HINT, LOG_ENTRIES, and TODAY_NOTES context, identify relevant tags from USER_TAGS
 not already in TAGS.
 
 If suggestions exist, print (numbering each tag from 1):
@@ -153,12 +205,15 @@ and repeat until no match is found. Use the first available value as ID.
 ## Step 10 — Compose note
 
 Write all synthesized prose and section headers in **LANG**.
-DAY_NOTE must be preserved verbatim — never translated, rephrased, or altered.
 
-Synthesize a **SUMMARY**: 2–3 sentences distilling the day from DAY_NOTE,
+If HINT is non-empty, open the composition with: "Focus the synthesis on: {HINT}."
+Use HINT to guide which events, decisions, and reflections to emphasize — do not
+write HINT verbatim into the note body.
+
+Synthesize a **SUMMARY**: 2–3 sentences distilling the day from HINT (if set),
 TODAY_NOTES, and LOG_ENTRIES. Write in LANG.
 
-Synthesize the structured sections from DAY_NOTE, TODAY_NOTES, and LOG_ENTRIES.
+Synthesize the structured sections from HINT, TODAY_NOTES, and LOG_ENTRIES.
 LOG_ENTRIES are especially useful for the Events and Decisions sections — each
 entry shows what was worked on in that session and what Claude helped with.
 - **Eventos / Events** — what happened, key activities (bullet list); draw from
@@ -191,10 +246,6 @@ type: journal
 
 {SUMMARY}
 
-## {section header in LANG: "Nota del día" / "Day note" / etc.}
-
-{DAY_NOTE — verbatim}
-
 ## {Events section header in LANG}
 
 - ...
@@ -226,6 +277,8 @@ Captured → Journal {DATE}.md  (id: {ID})
 ## Failure contract
 
 - **Vault not configured:** show the setup message from Step 1 and stop.
-- **Write fails:** print the full composed note content to the conversation
+- **Write fails (new journal):** print the full composed note to the conversation
+  so the user can paste it manually. Never silently discard content.
+- **Write fails (update):** print the full update block to the conversation
   so the user can paste it manually. Never silently discard content.
 - **mkdir fails:** report the error and stop.
