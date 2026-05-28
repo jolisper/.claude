@@ -27,7 +27,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     echo "  resolve-worktree-path.sh ~/.claude/worktree-config.json"
     exit 0
   fi
-  config_path="${1:-~/.claude/worktree-config.json}"
+  config_path="${1:-$HOME/.claude/worktree-config.json}"
   if [[ -z "$config_path" ]] || [[ ! -f "$config_path" ]]; then
     exit 0
   fi
