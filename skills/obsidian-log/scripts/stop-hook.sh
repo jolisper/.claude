@@ -56,7 +56,10 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     USER_MESSAGE=$(python3 -c "
 import json, sys, re
 def flatten(t):
-    return re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
+    t = re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
+    t = re.sub(r'(?<!`)<([a-zA-Z][a-zA-Z0-9_-]*)>(?!`)', r'`<\1>`', t)
+    t = re.sub(r'^( {0,3})```', r'\1~~~', t, flags=re.MULTILINE)
+    return t
 path = sys.argv[1]
 try:
     lines = open(path).readlines()
@@ -84,7 +87,10 @@ if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
     LAST_ASSISTANT=$(python3 -c "
 import json, sys, re
 def flatten(t):
-    return re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
+    t = re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
+    t = re.sub(r'(?<!`)<([a-zA-Z][a-zA-Z0-9_-]*)>(?!`)', r'`<\1>`', t)
+    t = re.sub(r'^( {0,3})```', r'\1~~~', t, flags=re.MULTILINE)
+    return t
 path = sys.argv[1]
 try:
     lines = open(path).readlines()
