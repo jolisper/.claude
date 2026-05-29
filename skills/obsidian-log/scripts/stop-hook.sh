@@ -51,71 +51,17 @@ except Exception:
 fi
 
 # Extract last user typed message: last type=user entry where content is a string (not array/tool result)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 USER_MESSAGE=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    USER_MESSAGE=$(python3 -c "
-import json, sys, re
-def flatten(t):
-    t = re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
-    t = re.sub(r'(?<!`)<([a-zA-Z][a-zA-Z0-9_-]*)>(?!`)', r'`<\1>`', t)
-    t = re.sub(r'^( {0,3})```', r'\1~~~', t, flags=re.MULTILINE)
-    return t
-path = sys.argv[1]
-try:
-    lines = open(path).readlines()
-    for line in reversed(lines):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            d = json.loads(line)
-            if d.get('type') == 'user':
-                content = d.get('message', {}).get('content', '')
-                if isinstance(content, str) and content.strip():
-                    print(flatten(content.strip()))
-                    break
-        except Exception:
-            continue
-except Exception:
-    pass
-" "$TRANSCRIPT_PATH" 2>/dev/null)
+    USER_MESSAGE=$(python3 "$SCRIPT_DIR/extract_messages.py" "$TRANSCRIPT_PATH" user 2>/dev/null)
 fi
 
 # Extract last assistant message from transcript (full text, no truncation)
 LAST_ASSISTANT=""
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-    LAST_ASSISTANT=$(python3 -c "
-import json, sys, re
-def flatten(t):
-    t = re.sub(r'^#{1,6} +(.*)', r'**\1**', t, flags=re.MULTILINE)
-    t = re.sub(r'(?<!`)<([a-zA-Z][a-zA-Z0-9_-]*)>(?!`)', r'`<\1>`', t)
-    t = re.sub(r'^( {0,3})```', r'\1~~~', t, flags=re.MULTILINE)
-    return t
-path = sys.argv[1]
-try:
-    lines = open(path).readlines()
-    for line in reversed(lines):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            d = json.loads(line)
-            if d.get('type') == 'assistant':
-                content = d.get('message', {}).get('content', '')
-                if isinstance(content, list):
-                    parts = [b.get('text','') for b in content if b.get('type') == 'text']
-                    text = ''.join(parts).strip()
-                    if text:
-                        print(flatten(text))
-                        break
-                elif isinstance(content, str) and content.strip():
-                    print(flatten(content.strip()))
-                    break
-        except Exception:
-            continue
-except Exception:
-    pass
-" "$TRANSCRIPT_PATH" 2>/dev/null)
+    LAST_ASSISTANT=$(python3 "$SCRIPT_DIR/extract_messages.py" "$TRANSCRIPT_PATH" assistant 2>/dev/null)
 fi
 
 # Skip turns with no user message (sub-agent completions, etc.)
