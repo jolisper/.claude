@@ -119,6 +119,7 @@ project: project-x       # optional — format TBD (tag ref or free text)
 ## Notes
 
 - Managed tag: `@task` (stub contains `managed-by: obsidian-task`).
+- Tag-notes remain stubs — no maintained index list. Obsidian backlinks provide the index for free.
 - The skill does **not** delegate status transitions to `/obsidian-update` —
   it owns frontmatter mutations directly.
 - `/obsidian-search` remains a general-purpose search skill; task-specific
