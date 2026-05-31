@@ -71,7 +71,7 @@ fi
 mkdir -p "$VAULT/logbook"
 if [ ! -f "$NOTE" ]; then
     NOTE_ID=$(date '+%Y%m%d%H%M')
-    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@log](@tags/@log.md)\n' \
+    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@log](../@tags/@log.md)\n' \
         "$NOTE_ID" "$DATE" "$DATE" "$DATE" > "$NOTE"
 fi
 

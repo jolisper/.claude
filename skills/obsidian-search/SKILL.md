@@ -47,11 +47,11 @@ The remainder is the **KEYWORD** string.
 ## Step 3 — Build candidate set
 
 **If TAGS is non-empty:**
-For each tag, use Grep to search `{VAULT}` for the pattern `](@tags/@{tag}.md)`.
+For each tag, use Grep to search `{VAULT}` for the pattern `@tags/@{tag}.md`.
 Union the matching files across all tags — include a note if it matches any tag.
 
 **If TAGS is empty:**
-Glob `{VAULT}/*.md` to get all content notes at vault root.
+Glob `{VAULT}/notes/*.md` to get all content notes.
 
 In both cases, exclude any files under `{VAULT}/@tags/`.
 

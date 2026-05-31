@@ -56,7 +56,9 @@ Run `date +%Y%m%d%H%M` → **ID**
 
 Run `date +%Y-%m-%d` → **DATE**
 
-## Step 4 — Ensure @tags/ exists
+## Step 4 — Ensure directories exist
+
+Run `mkdir -p {VAULT}/notes`. On failure: report the error and stop.
 
 Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
 Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
@@ -147,7 +149,7 @@ type: capture
 
 # {TITLE}
 
-[@tag1](@tags/@tag1.md) [@tag2](@tags/@tag2.md)
+[@tag1](../@tags/@tag1.md) [@tag2](../@tags/@tag2.md)
 
 {one or two sentence summary}
 
@@ -160,7 +162,7 @@ Omit the tag-link line entirely if TAGS is empty.
 
 ## Step 10 — Write and confirm
 
-Write the composed note to `{VAULT}/{FILENAME}`.
+Write the composed note to `{VAULT}/notes/{FILENAME}`.
 
 Confirm:
 ```

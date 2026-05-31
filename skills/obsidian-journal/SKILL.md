@@ -244,7 +244,7 @@ type: journal
 
 # Journal {DATE}
 
-[@journal](@tags/@journal.md) [@tag2](@tags/@tag2.md)
+[@journal](../@tags/@journal.md) [@tag2](../@tags/@tag2.md)
 
 {SUMMARY}
 

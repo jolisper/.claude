@@ -45,7 +45,7 @@ prioritize during analysis. Otherwise FOCUS is empty (full vault analysis).
 
 ## Step 3 — Read vault notes
 
-Glob `{VAULT}/*.md` to get all root-level content notes. Exclude any files
+Glob `{VAULT}/notes/*.md` to get all content notes. Exclude any files
 under `{VAULT}/@tags/`.
 
 For each note:
@@ -54,7 +54,7 @@ For each note:
 - Otherwise, read the file and extract:
   - **Filename** (without path)
   - **Existing tags** — all `[@tag]` tokens from the tag-link line (the first
-    non-empty line after the `# Heading` containing `](@tags/`). Empty if no
+    non-empty line after the `# Heading` containing `](../@tags/`). Empty if no
     tag-link line exists.
   - **Summary** — the first non-empty line after the tag-link line (or after
     the heading if no tag-link line).
@@ -175,10 +175,10 @@ For each (tag, note) pair in BACKFILL:
 
 1. Read the note.
 2. Update the tag-link line using Edit:
-   - If the note has a tag-link line (a line containing `](@tags/`): append
-     ` [@{tag}](@tags/@{tag}.md)` to it. Backfill tags from this skill are
+   - If the note has a tag-link line (a line containing `](../@tags/`): append
+     ` [@{tag}](../@tags/@{tag}.md)` to it. Backfill tags from this skill are
      always user tags — they go at the end, after any managed tags already present.
-   - If no tag-link line exists: insert `[@{tag}](@tags/@{tag}.md)` as a new
+   - If no tag-link line exists: insert `[@{tag}](../@tags/@{tag}.md)` as a new
      line immediately after the `# Heading` line, followed by a blank line.
 3. Update the `updated:` frontmatter field to TODAY using Edit.
 

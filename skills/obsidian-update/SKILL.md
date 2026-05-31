@@ -76,12 +76,12 @@ lowercase. Store as NEW_TAGS. The remainder is CONTENT.
 
 For each tag in NEW_TAGS:
 
-1. Check if `](@tags/@{tag}.md)` already appears in NOTE_PATH. If yes: skip.
+1. Check if `](../@tags/@{tag}.md)` already appears in NOTE_PATH. If yes: skip.
 2. Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
    Write `# @{tag}` to `{VAULT}/@tags/@{tag}.md`.
    On failure: report the error and stop.
-3. Append `[@{tag}](@tags/@{tag}.md)` to the tag-link line using Edit:
-   - If the note has a tag-link line (a line containing `](@tags/`): append to it.
+3. Append `[@{tag}](../@tags/@{tag}.md)` to the tag-link line using Edit:
+   - If the note has a tag-link line (a line containing `](../@tags/`): append to it.
    - If no tag-link line exists: insert one as a new line immediately after
      the `# Heading` line.
 
