@@ -16,7 +16,7 @@ except Exception:
 
 [ -z "$VAULT" ] && exit 0
 
-NOTE="$VAULT/Log $DATE.md"
+NOTE="$VAULT/logbook/Log $DATE.md"
 
 # Extract transcript path, session id from payload
 TRANSCRIPT_PATH=$(printf '%s' "$PAYLOAD" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('transcript_path',''))" 2>/dev/null)
@@ -68,6 +68,7 @@ fi
 [ -z "$USER_MESSAGE" ] && exit 0
 
 # Create note if it doesn't exist
+mkdir -p "$VAULT/logbook"
 if [ ! -f "$NOTE" ]; then
     NOTE_ID=$(date '+%Y%m%d%H%M')
     printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@log](@tags/@log.md)\n' \

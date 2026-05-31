@@ -63,7 +63,7 @@ Otherwise run `date +%Y-%m-%d` → **DATE**.
 
 ## Step 4 — One-per-day check
 
-Run `bash -c "test -f '{VAULT}/Journal {DATE}.md'"`.
+Run `bash -c "test -f '{VAULT}/logbook/Journal {DATE}.md'"`.
 
 If the file does not exist: continue to Step 5.
 
@@ -98,10 +98,10 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
   {synthesis sections — same structure as the main note: Events, Decisions, Reflections, Next steps}
   ```
 
-  Read the full content of `{VAULT}/Journal {DATE}.md` into **EXISTING_CONTENT**.
+  Read the full content of `{VAULT}/logbook/Journal {DATE}.md` into **EXISTING_CONTENT**.
   Replace the `updated: {old_date}` line in the frontmatter with `updated: {TODAY}`.
   Append the update block after the last line of EXISTING_CONTENT.
-  Write the result back to `{VAULT}/Journal {DATE}.md`.
+  Write the result back to `{VAULT}/logbook/Journal {DATE}.md`.
 
   Confirm:
   ```
@@ -109,7 +109,9 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
   ```
   Stop.
 
-## Step 5 — Ensure @tags/ exists
+## Step 5 — Ensure directories exist
+
+Run `mkdir -p {VAULT}/logbook`. On failure: report the error and stop.
 
 Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
 Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
@@ -142,7 +144,7 @@ No confirmation needed.
 ## Step 7 — Search today's notes
 
 Use Grep to search `{VAULT}` for `^created: {DATE}` in all `.md` files.
-Exclude files under `{VAULT}/@tags/` and `{VAULT}/Journal {DATE}.md`.
+Exclude files under `{VAULT}/@tags/` and `{VAULT}/logbook/Journal {DATE}.md`.
 
 Store the matching files as **TODAY_NOTES**. For each, read the file and
 extract: filename, `id:`, the tag-link line, and the first non-empty line
@@ -153,7 +155,7 @@ when composing the synthesis sections (Steps 9 and 10).
 
 ## Step 7b — Read session log for DATE
 
-Check whether `{VAULT}/Log {DATE}.md` exists.
+Check whether `{VAULT}/logbook/Log {DATE}.md` exists.
 
 If it exists: Read the file. Extract all session entries — each entry starts with a
 `## HH:MM` heading and includes the **User:** and **Assistant:** lines that follow it.
@@ -267,7 +269,7 @@ Omit the tag-link line entirely if TAGS is empty.
 
 ## Step 11 — Write and confirm
 
-Write the composed note to `{VAULT}/Journal {DATE}.md`.
+Write the composed note to `{VAULT}/logbook/Journal {DATE}.md`.
 
 Confirm:
 ```
