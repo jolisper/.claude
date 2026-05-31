@@ -54,52 +54,61 @@ This applies across all obsidian-* skills, not just obsidian-task.
 
 ---
 
-## Open design question: frontmatter vs. tag-notes for `project`
+## Design decisions: tag-notes vs. Obsidian tags vs. frontmatter
 
-This is the primary unresolved question. It has family-wide impact.
+This section records the design analysis and decisions made for the skill family.
+It has family-wide impact beyond `obsidian-task`.
 
-### Background
+### The three systems
 
-The existing skill family uses a **tag-note system** in the note body:
-`[@tag](@tags/@tag.md)` wikilinks, backed by stub files in `@tags/`. Designed
-for Obsidian graph navigation and cross-skill consistency.
+| System | How written | Obsidian sees it as | Bases-queryable | Graph edge |
+|---|---|---|---|---|
+| **Tag-note** | `[@tag](@tags/@tag.md)` in body | a link between two files | No | Yes |
+| **Obsidian tag** | `#tag` in body or `tags:` in frontmatter | a tag index entry | Yes | No |
+| **Frontmatter field** | `key: value` in YAML block | structured metadata | Yes | No |
 
-Obsidian Bases (v1.9+) **only reads frontmatter** — body tag-links are invisible
-to it. Structured task fields (`status`, `due`, `priority`, `project`) must be in
-frontmatter to be Bases-queryable.
+Tag-notes and Obsidian tags look similar conceptually (both label a note) but
+Obsidian handles them through entirely separate internal systems.
 
-### Use cases analyzed
+### Role of each system
 
-| Use case | Tag-notes | Frontmatter |
-|---|---|---|
-| "Show all open tasks for project-x" | skill greps manually | Bases native filter |
-| "Show everything related to project-x" (tasks, captures, ADRs) | grep across all note types — works because every skill writes tag-links | needs `project` field on every note type |
-| "What's due this week?" | impossible — no typed date value | Bases date filter |
-| Navigate from task → project note in Obsidian | clickable wikilink | plain text, no navigation |
+- **Frontmatter** is authoritative for **querying and filtering** — Bases, scripts,
+  structured reads. Only holds fields the skill owns completely (type, status, due,
+  priority). Fields a human must supply (project) do not belong here: no skill can
+  derive them reliably, so they become a maintenance burden.
 
-### Emerging frame
+- **Tag-notes** serve as **multi-dimensional labeling** — a folder replacement that
+  lets a note belong to multiple topics simultaneously. Their value is the graph hub
+  and backlinks panel, which emerge at scale. Overlap with frontmatter is acceptable
+  when a skill owns both sides (e.g. `type: log` + `@log` tag-note).
 
-- **Tag-notes** are good for *identity* — what a note is about, graph connections,
-  human navigation, cross-note-type queries.
-- **Frontmatter** is good for *state* — typed values, lifecycle fields, Bases queries,
-  fields that change over time.
+### Decision: `project` stays in tag-notes only
 
-Under this reading: `project` as a tag-note links a task to a project and enables
-cross-type vault queries. `status`, `due`, `priority` as frontmatter enable Bases
-filtering and date sorting. Both systems doing different things, not competing.
+`project` will not be added to frontmatter. No skill can derive which project a note
+belongs to — it requires human input at write time, making it a maintenance liability.
+Tag-notes handle project association through wikilinks; backlinks provide the index
+for free.
 
-### Not yet decided
+### Decision: tag-notes are stubs
 
-- Whether `project` lives in frontmatter, tag-notes, or both.
-- Whether other note types (capture, journal, literal) should adopt a `project`
-  frontmatter field for Bases compatibility — or whether tag-notes remain the
-  only cross-type linking mechanism.
-- Whether the skill writes both representations when `project` is specified
-  (frontmatter + tag-link) and what the maintenance contract looks like.
+Tag-notes remain stub files (heading only, no content). The backlinks panel provides
+the per-tag index without any maintained list.
+
+### Open question: tag-notes vs. native Obsidian tags
+
+Whether to replace tag-notes with native Obsidian tags (`#tag` / `tags:` frontmatter)
+is not yet resolved. The trade-off:
+
+- Native tags: Bases-queryable, no stub files, simpler — but no graph hub node.
+- Tag-notes: graph edges and backlinks as index — but Bases-invisible, requires
+  `@tags/` directory and stub files.
+
+Current tag stubs are all empty (heading only), so the "content" advantage of
+tag-notes is not being used. Graph hub value emerges at scale; the vault is young.
 
 ---
 
-## Frontmatter schema (partial — pending project decision)
+## Frontmatter schema
 
 ```yaml
 ---
@@ -110,9 +119,10 @@ type: task
 status: todo
 due: 2026-06-10          # optional, ISO date
 priority: medium         # optional: low | medium | high
-project: project-x       # optional — format TBD (tag ref or free text)
 ---
 ```
+
+Project association is handled via tag-notes in the note body, not frontmatter.
 
 ---
 
