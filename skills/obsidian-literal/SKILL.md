@@ -59,15 +59,15 @@ Run `date +%Y-%m-%d` → **DATE**
 
 Run `mkdir -p {VAULT}/notes`. On failure: report the error and stop.
 
-Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
-Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
+Run `bash -c "test -d '{VAULT}/@topics'"`. If non-zero:
+Run `mkdir -p {VAULT}/@topics`. On failure: report the error and stop.
 
 ## Step 5 — Ensure tag stubs exist
 
 For each tag in TAGS:
 
-Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
-Write to `{VAULT}/@tags/@{tag}.md`:
+Run `bash -c "test -f '{VAULT}/@topics/@{tag}.md'"`. If non-zero:
+Write to `{VAULT}/@topics/@{tag}.md`:
 ```markdown
 # @{tag}
 ```
@@ -75,7 +75,7 @@ No confirmation needed.
 
 ## Step 6 — Suggest additional tags
 
-Glob `{VAULT}/@tags/@*.md` to get all existing tags. For each stub, read it
+Glob `{VAULT}/@topics/@*.md` to get all existing tags. For each stub, read it
 and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
 suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
@@ -130,7 +130,7 @@ type: literal
 
 # {TITLE}
 
-[@tag1](../@tags/@tag1.md) [@tag2](../@tags/@tag2.md)
+[@tag1](../@topics/@tag1.md) [@tag2](../@topics/@tag2.md)
 
 {CONTENT — exactly as provided, no rewriting, no translation}
 ```

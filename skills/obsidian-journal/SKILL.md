@@ -113,15 +113,15 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
 
 Run `mkdir -p {VAULT}/logbook`. On failure: report the error and stop.
 
-Run `bash -c "test -d '{VAULT}/@tags'"`. If non-zero:
-Run `mkdir -p {VAULT}/@tags`. On failure: report the error and stop.
+Run `bash -c "test -d '{VAULT}/@topics'"`. If non-zero:
+Run `mkdir -p {VAULT}/@topics`. On failure: report the error and stop.
 
 ## Step 6 — Ensure tag stubs exist
 
 For each tag in TAGS:
 
-Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
-Write to `{VAULT}/@tags/@{tag}.md`:
+Run `bash -c "test -f '{VAULT}/@topics/@{tag}.md'"`. If non-zero:
+Write to `{VAULT}/@topics/@{tag}.md`:
 ```markdown
 # @{tag}
 ```
@@ -130,7 +130,7 @@ No confirmation needed.
 ## Step 7 — Search today's notes
 
 Use Grep to search `{VAULT}` for `^created: {DATE}` in all `.md` files.
-Exclude files under `{VAULT}/@tags/` and `{VAULT}/logbook/Journal {DATE}.md`.
+Exclude files under `{VAULT}/@topics/` and `{VAULT}/logbook/Journal {DATE}.md`.
 
 Store the matching files as **TODAY_NOTES**. For each, read the file and
 extract: filename, `id:`, the tag-link line, and the first non-empty line
@@ -163,7 +163,7 @@ If the file does not exist or is empty:
 
 ## Step 8 — Suggest additional tags
 
-Glob `{VAULT}/@tags/@*.md` to get all existing tags. For each stub, read it
+Glob `{VAULT}/@topics/@*.md` to get all existing tags. For each stub, read it
 and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
 suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
@@ -227,7 +227,7 @@ type: journal
 
 # Journal {DATE}
 
-[@tag1](../@tags/@tag1.md) [@tag2](../@tags/@tag2.md)
+[@tag1](../@topics/@tag1.md) [@tag2](../@topics/@tag2.md)
 
 {SUMMARY}
 

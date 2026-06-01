@@ -1,16 +1,16 @@
 ---
-name: obsidian-tags
+name: obsidian-topics
 description: >
   Use this skill to analyze the vault for recurring topics and suggest new
-  tags. Invoke when the user runs /obsidian-tags to discover tagging
+  topic tags. Invoke when the user runs /obsidian-topics to discover tagging
   opportunities across the vault and optionally backfill accepted tags onto
   existing notes.
 argument-hint: "[topic or keyword]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(bash:*) Bash(date:*) Edit Write
 when_to_use: >
-  Invoke when the user explicitly runs /obsidian-tags to audit the vault's
-  tag coverage and discover new tag candidates based on vault-wide analysis.
+  Invoke when the user explicitly runs /obsidian-topics to audit the vault's
+  tag coverage and discover new topic candidates based on vault-wide analysis.
 ---
 
 Analyze the vault for recurring topics and suggest new tags. `$ARGUMENTS` is
@@ -46,7 +46,7 @@ prioritize during analysis. Otherwise FOCUS is empty (full vault analysis).
 ## Step 3 — Read vault notes
 
 Glob `{VAULT}/notes/*.md` to get all content notes. Exclude any files
-under `{VAULT}/@tags/`.
+under `{VAULT}/@topics/`.
 
 For each note:
 - Read the frontmatter `type:` field.
@@ -54,7 +54,7 @@ For each note:
 - Otherwise, read the file and extract:
   - **Filename** (without path)
   - **Existing tags** — all `[@tag]` tokens from the tag-link line (the first
-    non-empty line after the `# Heading` containing `](../@tags/`). Empty if no
+    non-empty line after the `# Heading` containing `](../@topics/`). Empty if no
     tag-link line exists.
   - **Summary** — the first non-empty line after the tag-link line (or after
     the heading if no tag-link line).
@@ -62,7 +62,7 @@ For each note:
 
 ## Step 4 — Build user-owned tag list
 
-Glob `{VAULT}/@tags/@*.md` to get all tag stubs. For each stub, read it and
+Glob `{VAULT}/@topics/@*.md` to get all tag stubs. For each stub, read it and
 check whether its content contains `managed-by:`. Strip `@` prefix and `.md`
 suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
 
@@ -144,8 +144,8 @@ Otherwise apply the supplied renames and proceed.
 
 For each tag in ACCEPTED:
 
-Run `bash -c "test -f '{VAULT}/@tags/@{tag}.md'"`. If non-zero:
-Write to `{VAULT}/@tags/@{tag}.md`:
+Run `bash -c "test -f '{VAULT}/@topics/@{tag}.md'"`. If non-zero:
+Write to `{VAULT}/@topics/@{tag}.md`:
 ```markdown
 # @{tag}
 ```
@@ -175,10 +175,10 @@ For each (tag, note) pair in BACKFILL:
 
 1. Read the note.
 2. Update the tag-link line using Edit:
-   - If the note has a tag-link line (a line containing `](../@tags/`): append
-     ` [@{tag}](../@tags/@{tag}.md)` to it. Backfill tags from this skill are
+   - If the note has a tag-link line (a line containing `](../@topics/`): append
+     ` [@{tag}](../@topics/@{tag}.md)` to it. Backfill tags from this skill are
      always user tags — they go at the end, after any managed tags already present.
-   - If no tag-link line exists: insert `[@{tag}](../@tags/@{tag}.md)` as a new
+   - If no tag-link line exists: insert `[@{tag}](../@topics/@{tag}.md)` as a new
      line immediately after the `# Heading` line, followed by a blank line.
 3. Update the `updated:` frontmatter field to TODAY using Edit.
 
