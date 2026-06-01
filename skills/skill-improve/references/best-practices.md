@@ -90,6 +90,12 @@ Don't document things the agent already knows (how to use git, how to write JSON
 - Project-specific context
 - Edge case handling the agent gets wrong without guidance
 
+## AskUserQuestion vs plain text menus
+
+The project standard is plain text menus. Output the menu as text and wait for the user's reply in the conversation. Do **not** use `AskUserQuestion`.
+
+Using `AskUserQuestion` alongside a text menu creates a double-prompt: the model renders the text block, then the native dialog opens on top of it. Even without a preceding text menu, the tool is inconsistent with how every other skill in this project handles user interaction.
+
 ## $ARGUMENTS
 
 Use `$ARGUMENTS` to reference user-supplied input when the skill accepts a parameter. Check for empty `$ARGUMENTS` at the start and ask for input if needed.

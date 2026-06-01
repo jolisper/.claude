@@ -13,6 +13,7 @@ Check against `references/best-practices.md` for detailed guidance on each item.
 - Menu standard violated: lettered menus missing a Cancel option, or bare yes/no used instead of `(a) Proceed / (b) Cancel`; every `(a)/(b)/...` menu that can abort a workflow must include a Cancel option
 - `$ARGUMENTS` not checked at the start — skill doesn't ask for input when `$ARGUMENTS` is empty
 - Compound Bash expressions (`&&`, `||`, pipes) used in skill steps — they trigger approval prompts and interrupt flow; prefer separate Bash calls
+- `AskUserQuestion` used anywhere in the body — the project standard is plain text menus; output the menu text directly and wait for the user's reply in conversation (see `git-worktree/SKILL.md` and `references/best-practices.md`)
 - Failure paths not specified: missing error output format, recovery steps, or subprocess failure contracts
 - "When NOT to use / abort" section absent for destructive or context-sensitive skills
 - Delegation boundaries don't restate tool restrictions and behavioral contracts when handing off to sub-skills

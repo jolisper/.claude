@@ -52,6 +52,12 @@ These fields are supported by Claude Code but are not part of the base agentskil
 - Mention what the skill does, not how it works
 - Keep it scannable: no run-on sentences
 
+## AskUserQuestion
+
+`AskUserQuestion` is a Claude Code tool that pauses execution and renders a native structured dialog — the user sees a UI widget with labelled options, not a text message in the conversation.
+
+The project standard is textual menus: output the menu as plain text and wait for the user's reply in conversation. `AskUserQuestion` should not be used. The convention is codified in `git-worktree/SKILL.md`: "Never call `AskUserQuestion` — output text menus directly and wait for the user to type a response."
+
 ## Body format
 
 Plain markdown. No required structure — use headings, lists, or prose as appropriate.
