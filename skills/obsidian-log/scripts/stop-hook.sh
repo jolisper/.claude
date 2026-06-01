@@ -71,13 +71,8 @@ fi
 mkdir -p "$VAULT/logbook"
 if [ ! -f "$NOTE" ]; then
     NOTE_ID=$(date '+%Y%m%d%H%M')
-    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n\n[@log](../@tags/@log.md)\n' \
+    printf -- '---\nid: %s\ncreated: %s\nupdated: %s\ntype: log\n---\n\n# Log %s\n' \
         "$NOTE_ID" "$DATE" "$DATE" "$DATE" > "$NOTE"
-fi
-
-# Ensure @log tag stub exists (managed by obsidian-log)
-if [ ! -f "$VAULT/@tags/@log.md" ]; then
-    printf -- '---\nmanaged-by: obsidian-log\n---\n\n# @log\n' > "$VAULT/@tags/@log.md"
 fi
 
 # Append the log entry
