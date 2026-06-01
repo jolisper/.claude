@@ -3,13 +3,54 @@
     "type": "command",
     "command": "sh ~/.claude/statusline/command.sh"
   },
+  "permissions": {
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.netrc/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.git-credentials/**)",
+      "Read(~/.config/**)",
+      "Bash(cat ~/.ssh/**)",
+      "Bash(cat ~/.gnupg/**)",
+      "Bash(cat ~/.netrc/**)",
+      "Bash(cat ~/.aws/**)",
+      "Bash(cat ~/.config/**)"
+    ]
+  },
   "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/skills/obsidian-log/scripts/stop-hook.sh"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
             "command": "input=$(cat); sid=$(echo \"$input\" | jq -r '.session_id'); test -f \"/tmp/claude-session-start-$sid\" || date +%s > \"/tmp/claude-session-start-$sid\""
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/scripts/ollama-session-reset.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ~/.claude/scripts/english-tutor.py"
           }
         ]
       }
