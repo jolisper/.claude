@@ -58,9 +58,11 @@ No .obsidian/ directory found at {path}. How do you want to proceed?
 
 On (a): run `mkdir -p {path}/.obsidian`, then Write `{}` to `{path}/.obsidian/app.json`. On (b): stop.
 
-### Step 4 — Ensure @topics/ exists
+### Step 4 — Ensure @topics/ and notes/ exist
 
 Run `bash -c "test -d '{path}/@topics'"`. If it does not exist, run `mkdir -p {path}/@topics`. Never touch existing contents.
+
+Run `bash -c "test -d '{path}/notes'"`. If it does not exist, run `mkdir -p {path}/notes`. Never touch existing contents.
 
 ### Step 5 — Choose config scope
 
@@ -106,7 +108,8 @@ Run each as a separate Bash call:
 2. `bash -c "test -w '{path}'"` — vault is writable
 3. `bash -c "test -d '{path}/.obsidian'"` — .obsidian/ exists
 4. `bash -c "test -d '{path}/@topics'"` — @topics/ exists
-5. Read `{config_path}` — verify it is valid JSON, `vault` equals the correct path, and `language` is present
+5. `bash -c "test -d '{path}/notes'"` — notes/ exists
+6. Read `{config_path}` — verify it is valid JSON, `vault` equals the correct path, and `language` is present
 
 If any check fails: report exactly which check failed and what the user must do to fix it. Stop.
 
@@ -116,6 +119,7 @@ If any check fails: report exactly which check failed and what the user must do 
 ✓ Vault configured: {path}
 ✓ Language: {LANG}
 ✓ @topics/ ready
+✓ notes/ ready
 ✓ Config pointer written to {config_path}
 All skills are ready to use.
 ```
