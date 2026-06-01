@@ -21,7 +21,7 @@ while [[ $# -gt 0 ]]; do
     --title)            TITLE="$2"; shift 2 ;;
     --description-file) DESC_FILE="$2"; shift 2 ;;
     --help|-h)          usage; exit 0 ;;
-    *)                  shift ;;
+    *)                  echo "Error: unknown argument: $1" >&2; exit 1 ;;
   esac
 done
 
