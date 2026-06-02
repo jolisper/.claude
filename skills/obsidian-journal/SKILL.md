@@ -5,7 +5,7 @@ description: >
   runs /obsidian-journal to generate a structured debrief (events, decisions,
   reflections, next steps) synthesized from the session log, vault notes, and
   an optional focus hint. Accepts an optional date (default: today) and tags.
-argument-hint: "[YYYY-MM-DD] [#tag ...] [hint]"
+argument-hint: "[YYYY-MM-DD] [hint]"
 disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write
 when_to_use: >
@@ -42,14 +42,11 @@ value. If the field is absent or VAULT came from the env var, default LANG to `e
 
 ## Step 2 — Parse arguments
 
-`$ARGUMENTS` may contain three optional components in any order:
+`$ARGUMENTS` may contain two optional components in any order:
 
 1. **Date token** — a string matching `YYYY-MM-DD` (e.g. `2026-05-27`). Extract it as
    **TARGET_DATE**. If absent, TARGET_DATE is empty.
-2. **Tag tokens** — strings matching `#[a-zA-Z][a-zA-Z0-9_-]*`. Extract all of them as
-   **TAGS** (normalize to lowercase, strip `#`).
-3. **Hint** — the remainder after removing the date token and all tag tokens. Trim
-   whitespace. Store as **HINT**.
+2. **Hint** — the remainder after removing the date token. Trim whitespace. Store as **HINT**.
 
 `HINT` is a focus directive for journal synthesis — it is **not** stored verbatim in the
 note. If HINT is empty the journal is generated purely from the session log.
@@ -85,10 +82,10 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
   Run `date +%H:%M` → **UPDATE_TIME**.
   Run `date +%Y-%m-%d` → **TODAY**.
 
-  Execute Steps 7 and 7b now to load TODAY_NOTES and LOG_ENTRIES, then continue.
+  Execute Steps 6 and 7 now to load TODAY_NOTES and LOG_ENTRIES, then continue.
 
   Synthesize an update using HINT, LOG_ENTRIES, and TODAY_NOTES following the same
-  composition rules as Step 10. Produce only the synthesis sections that have
+  composition rules as Step 9. Produce only the synthesis sections that have
   content to report — omit empty ones.
 
   Compose the update block in LANG:
@@ -113,21 +110,7 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
 
 Run `mkdir -p {VAULT}/logbook`. On failure: report the error and stop.
 
-Run `bash -c "test -d '{VAULT}/@topics'"`. If non-zero:
-Run `mkdir -p {VAULT}/@topics`. On failure: report the error and stop.
-
-## Step 6 — Ensure tag stubs exist
-
-For each tag in TAGS:
-
-Run `bash -c "test -f '{VAULT}/@topics/@{tag}.md'"`. If non-zero:
-Write to `{VAULT}/@topics/@{tag}.md`:
-```markdown
-# @{tag}
-```
-No confirmation needed.
-
-## Step 7 — Search today's notes
+## Step 6 — Search today's notes
 
 Use Grep to search `{VAULT}` for `^created: {DATE}` in all `.md` files.
 Exclude files under `{VAULT}/@topics/` and `{VAULT}/logbook/Journal {DATE}.md`.
@@ -137,9 +120,9 @@ extract: filename, `id:`, the tag-link line, and the first non-empty line
 after the tag-link line (the summary).
 
 If TODAY_NOTES is non-empty, use these notes as additional source material
-when composing the synthesis sections (Steps 9 and 10).
+when composing the synthesis sections (Steps 8 and 9).
 
-## Step 7b — Read session log for DATE
+## Step 7 — Read session log for DATE
 
 Check whether `{VAULT}/logbook/Log {DATE}.md` exists.
 
@@ -161,36 +144,13 @@ If the file does not exist or is empty:
   On (a): if HINT is empty, ask `What should the journal focus on?` and use the
   reply as HINT. Set LOG_ENTRIES to empty.
 
-## Step 8 — Suggest additional tags
-
-Glob `{VAULT}/@topics/@*.md` to get all existing tags. For each stub, read it
-and check for a `managed-by:` frontmatter field. Strip `@` prefix and `.md`
-suffix from stubs that do **not** contain `managed-by:`. Store as **USER_TAGS**.
-
-Using HINT, LOG_ENTRIES, and TODAY_NOTES context, identify relevant tags from USER_TAGS
-not already in TAGS.
-
-If suggestions exist, print (numbering each tag from 1):
-```
-Suggested tags: 1) #tag1  2) #tag2 — add?
-(a) Add all
-(b) Pick — reply with numbers: 1 2 ...
-(c) Skip
-```
-Wait for the user's reply.
-On (a): add all suggestions to TAGS.
-On (b): parse the reply for space-separated numbers (1-based). Add the
-  corresponding tags to TAGS.
-On (c): continue.
-For each newly added tag not yet on disk, write its stub as in Step 6.
-
-## Step 9 — ID collision check
+## Step 8 — ID collision check
 
 Use Grep to search `{VAULT}` for the line `^id: {ID}` in frontmatter.
 If any file matches: append the next available letter suffix (`a`, `b`, ...)
 and repeat until no match is found. Use the first available value as ID.
 
-## Step 10 — Compose note
+## Step 9 — Compose note
 
 Write all synthesized prose and section headers in **LANG**.
 
@@ -227,8 +187,6 @@ type: journal
 
 # Journal {DATE}
 
-[@tag1](../@topics/@tag1.md) [@tag2](../@topics/@tag2.md)
-
 {SUMMARY}
 
 ## {Events section header in LANG}
@@ -248,9 +206,7 @@ type: journal
 - ...
 ```
 
-Omit the tag-link line entirely if TAGS is empty.
-
-## Step 11 — Write and confirm
+## Step 10 — Write and confirm
 
 Write the composed note to `{VAULT}/logbook/Journal {DATE}.md`.
 
