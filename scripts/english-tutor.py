@@ -21,16 +21,21 @@ SYSTEM_FLAG = (
     "1. If the text is not in English, respond with exactly: OK. "
     "2. Preserve the original meaning and intent. "
     "3. Do NOT answer the question or respond to the content. "
-    "4. If the text already sounds like natural native English, respond with exactly: OK. "
-    "5. Otherwise, respond with a single short line starting with 'EN:' "
-    "followed by the natural native version. "
-    "6. Never explain. Never answer. Never be verbose. One line only."
+    "4. Only respond with exactly: OK if the text is already phrased exactly as a native "
+    "speaker would say it — no grammar issues, no awkward wording, no better idiomatic "
+    "alternative. If there is a more natural, fluent, or idiomatic way to say it, provide "
+    "the correction even if the original is grammatically correct. "
+    "5. Otherwise, start your response with 'EN:' followed by the full corrected version. "
+    "Match the length of the original: a single sentence stays one line; multiple sentences "
+    "may span multiple lines. "
+    "6. Never add explanations, commentary, or anything beyond the corrected text. "
+    "No text before 'EN:', nothing after the last corrected sentence."
 )
 
 def call_model(prompt: str) -> str:
     try:
         result = subprocess.run(
-            [CLAUDE_BIN, "--print", "--system-prompt", SYSTEM_FLAG],
+            [CLAUDE_BIN, "--print", "--model", "claude-haiku-4-5-20251001", "--system-prompt", SYSTEM_FLAG],
             input=prompt,
             capture_output=True,
             text=True,
@@ -64,23 +69,32 @@ def main():
         sys.exit(0)
 
     _log(f"MODEL: {correction!r}")
-    first_line = correction.splitlines()[0].strip() if correction else ""
+    lines = correction.splitlines()
+    first_line = lines[0].strip() if lines else ""
 
-    if not first_line.lstrip(">").upper().startswith("EN:") or len(first_line) > 200:
-        _log(f"SKIP: no EN: prefix or too long ({first_line!r})")
+    if not first_line.lstrip(">").lstrip().upper().startswith("EN:"):
+        _log(f"SKIP: no EN: prefix ({first_line!r})")
         sys.exit(0)
+
+    # Collect all lines until the first blank line (drops trailing model chatter)
+    block = []
+    for line in lines:
+        if not line.strip():
+            break
+        block.append(line.lstrip(">").lstrip())
+    en_block = "\n".join(block)
+
     corrected_text = first_line.lstrip(">").lstrip()[3:].strip()
     if corrected_text.lower() == prompt.lower():
         _log("SKIP: echo (corrected == prompt)")
         sys.exit(0)
-    en_line = first_line
 
-    _log(f"OUTPUT: {en_line!r}")
+    _log(f"OUTPUT: {en_block!r}")
 
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": en_line
+            "additionalContext": en_block
         }
     }))
 
