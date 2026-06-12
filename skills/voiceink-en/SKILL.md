@@ -11,18 +11,13 @@ effort: low
 
 - `~/.claude/skills/voiceink-en/scripts/set-en.sh` — kills VoiceInk, sets `SelectedLanguage` to `en`, restarts it in the background, and returns focus to the previously active app; prints `status=done lang=en` and a human-readable result line on stdout.
 
-## Abort conditions
-
-Stop before running the script if:
-- VoiceInk is not running (`pgrep -x VoiceInk` returns non-zero) — report: "VoiceInk is not running — start it first." and stop.
-
 ## Steps
 
-1. Check VoiceInk is running:
+1. If VoiceInk is not running (`pgrep -x VoiceInk` returns non-zero), start it:
    ```
-   pgrep -x VoiceInk
+   open -g /Applications/VoiceInk.app
+   sleep 3
    ```
-   If not running, stop (see Abort conditions).
 
 2. Run:
    ```
