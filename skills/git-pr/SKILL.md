@@ -110,7 +110,7 @@ Otherwise parse `SOURCE`, `BASE`, `WORKSPACE`, `REPO`, `TITLE`, and `DESCRIPTION
 
 ## Step 2 — Preview and confirm
 
-Show exactly this block, then wait for the user's choice:
+Do not use the `AskUserQuestion` tool in this step. Show exactly this block as plain text output, then stop and wait for the user to reply with a letter:
 
 ```
 PR preview:
