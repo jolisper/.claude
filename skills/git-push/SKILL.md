@@ -12,6 +12,8 @@ Push the current branch to its remote. Follow this protocol:
 
 **Important**: Never use `cd`, `git -C`, `&&`, or `||`. Run each command separately with no path arguments — rely on the shell's current working directory.
 
+**Important**: Never use `AskUserQuestion`. All menus must be plain text — print the options as `(a) ... (b) ... (c) ...` and wait for a text reply.
+
 ## Step 1 — Pre-flight check
 
 Run each of these commands separately:
