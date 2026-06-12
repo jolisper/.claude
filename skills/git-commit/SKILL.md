@@ -8,7 +8,7 @@ description: >
   before committing. When invoked by the model (not via /git-commit), treat as
   --auto: the interactive prompts are meaningless when the model drives both sides.
 allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
-argument-hint: "[--auto]"
+argument-hint: "[--no-auto]"
 ---
 
 Stage changes and commit them using a Conventional Commits message. Follow this protocol:
@@ -17,7 +17,7 @@ Stage changes and commit them using a Conventional Commits message. Follow this 
 
 ## Arguments
 
-If `$ARGUMENTS` contains `--auto`, or if this skill was invoked by the model (not via a user-typed `/git-commit`): enable auto mode. In auto mode the skill still displays the grouping analysis and proposed message, but proceeds without asking for confirmation at Steps 2 and 5. The sensitive data scan (Step 4) **always runs** — auto mode never bypasses it.
+Auto mode is **on by default**. If `$ARGUMENTS` contains `--no-auto`, disable auto mode (interactive confirmations at Steps 2 and 5). In auto mode the skill still displays the grouping analysis and proposed message, but proceeds without asking for confirmation at Steps 2 and 5. The sensitive data scan (Step 4) **always runs** — auto mode never bypasses it.
 
 ## Step 1 — Pre-flight check
 

@@ -6,7 +6,7 @@ description: >
   or "ship it". Runs the full commit protocol followed by the full push
   protocol.
 disable-model-invocation: true
-argument-hint: "[--auto]"
+argument-hint: "[--no-auto]"
 allowed-tools: Read Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Bash(git rev-parse:*) Bash(git push:*) Bash(git fetch:*) Bash(bash ~/.claude/skills/git-push/scripts/:*)
 ---
 
@@ -24,12 +24,11 @@ Before starting, run `git rev-parse --abbrev-ref --symbolic-full-name @{u}`. If 
 
 # Phase 1 — Commit
 
-Read `~/.claude/skills/git-commit/SKILL.md` and follow its protocol in full. If `$ARGUMENTS` contains `--auto`, apply git-commit's auto mode (proceed without confirmation at grouping and message steps). Complete all commits before proceeding.
+Read `~/.claude/skills/git-commit/SKILL.md` and follow its protocol in full. Apply git-commit's auto mode by default; pass `--no-auto` if `$ARGUMENTS` contains `--no-auto` to enable interactive confirmations. Complete all commits before proceeding.
 
 If the commit fails or the user aborts at any point, stop — do not proceed to Phase 2.
 
-After all commits are done, ask the user:
-"All commits done. Ready to push?" — wait for explicit confirmation. If the user says no or does not confirm, stop.
+After all commits are done: if `$ARGUMENTS` contains `--no-auto`, ask the user "All commits done. Ready to push?" and wait for explicit confirmation (stop if declined). Otherwise (default auto mode), proceed directly to Phase 2.
 
 ---
 
