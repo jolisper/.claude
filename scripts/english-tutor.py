@@ -5,6 +5,7 @@ import sys
 import subprocess
 import datetime
 from typing import Optional
+from difflib import SequenceMatcher
 
 LOG_FILE = "/tmp/english-tutor-debug.log"
 CONFIG_FILE = os.path.expanduser("~/.claude/english-tutor.json")
@@ -76,6 +77,18 @@ def clear_pending(session_id: str):
     if os.path.exists(path):
         os.remove(path)
 
+SIMILARITY_THRESHOLD = 0.85
+
+def _normalize(text: str) -> str:
+    import re
+    return re.sub(r"[^\w\s]", "", text.lower()).split()
+
+def is_close_enough(a: str, b: str) -> bool:
+    na, nb = " ".join(_normalize(a)), " ".join(_normalize(b))
+    ratio = SequenceMatcher(None, na, nb).ratio()
+    _log(f"SIMILARITY: {ratio:.2f} (threshold {SIMILARITY_THRESHOLD})")
+    return ratio >= SIMILARITY_THRESHOLD
+
 def block_with_correction(correction: str, attempt: int = 1):
     label = "Correct your English before continuing" if attempt == 1 else "Still not quite right — try again"
     sys.stderr.write(f"[EN Strict] {label}:\n\n  {correction}\n\nRetype your message using the corrected phrasing.\n")
@@ -103,6 +116,12 @@ def main():
 
     strict = _load_config().get("strict", False)
     pending = get_pending(session_id) if strict else None
+
+    # On retry: if the message is close enough to the saved correction, approve without re-checking
+    if pending and is_close_enough(prompt, pending):
+        _log("STRICT: retry approved by similarity match")
+        clear_pending(session_id)
+        sys.exit(0)
 
     correction = call_model(prompt)
     if not correction:
