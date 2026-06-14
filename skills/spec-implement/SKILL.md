@@ -32,7 +32,7 @@
   - Do not call `Write`, `Edit`, or `Bash` to create or modify any implementation,
     test, build, or config file.
   - Do not use heredocs, `cat >`, `tee`, or any shell command to write code.
-  - The only files you may write are the master log (`tdd/sessions/spec-implement-*.md`)
+  - The only files you may write are the master log (`initiatives/<name>/implement-log.md`)
     and phase log entries within it.
   - All code writing goes through the `Agent` tool. No exceptions.
 
@@ -154,7 +154,7 @@
   REST API + SPA to illustrate the format — your actual phase names and numbers
   will differ:
 
-  Phase plan derived from :
+  Phase plan derived from <spec>:
 
   1. [Scaffold] dependency manifest — package manager manifest, lockfile
   2. [Scaffold] directory layout — src/, src/handlers/, src/models/, frontend/src/
@@ -171,24 +171,82 @@
   13. [TDD]      frontend/src/pages/TaskListPage.tsx — fetch lifecycle, render
   14. [TDD]      frontend/src/components/* — TaskRow, FilterBar, NewTaskForm
 
-  How do you want to proceed?
+  Then check whether `initiatives/<name>/implement-log.md` exists and read its
+  frontmatter.
+
+  **If an existing log is found**, read `last-completed-phase` and present:
+
+  ```
+  Found an existing session (initiatives/<name>/implement-log.md).
+  Last completed phase: <N>.
+
+  (a) Resume from phase <N+1>
+  (b) Start from a specific phase — enter its number
+  (c) Start over — overwrite the existing log
+  (d) Cancel
+  ```
+
+  On (b): ask which phase number.
+  On (c): proceed as if no log existed.
+  On (d): stop.
+
+  **If no existing log is found**, present:
+
+  ```
   (a) Start from the first pending phase
   (b) Start from a specific phase — enter its number
   (c) Cancel
+  ```
 
   On (b): ask which phase number and skip earlier phases.
   On (c): stop.
 
   ---
 
-  ## Step 5 — Initialize the Master Log
+  ## Step 5 — Initialize or Resume the Log
 
-  Run `mkdir -p tdd/sessions`, then write
-  `tdd/sessions/spec-implement-<slug>.md` where `<slug>` is derived from the
-  spec filename. Tell the user the path.
+  The log lives at `initiatives/<name>/implement-log.md`, co-located with the
+  specs. `<name>` is the initiative directory — the parent directory of the
+  `technical-spec.md`.
 
-  Open the log with a paragraph covering: the spec, the full phase plan, the
-  starting phase, and what "done" looks like for this implementation.
+  **If starting fresh** (no existing log, or user chose "start over" in Step 4):
+
+  Write `initiatives/<name>/implement-log.md` with this structure:
+
+  ~~~markdown
+  ---
+  spec: initiatives/<name>/technical-spec.md
+  started: <YYYY-MM-DD>
+  last-completed-phase: 0
+  status: in-progress
+  ---
+
+  # Implementation Log: <feature-name>
+
+  <opening paragraph: what is being built, the full phase plan, the starting
+  phase, and what "done" looks like for this implementation>
+
+  ## Phase Plan
+
+  1. [Scaffold] ...
+  ...
+  N. [TDD] ...
+  ~~~
+
+  **If resuming** (user chose "resume" or "start from a specific phase" against
+  an existing log):
+
+  Read the existing log. Set the resume point from `last-completed-phase` or
+  the user-specified phase number. Append a divider to the log:
+
+  ~~~markdown
+
+  ---
+  Resumed: <YYYY-MM-DD>, starting from phase <N>
+  ---
+  ~~~
+
+  Tell the user the log path and the phase being resumed from.
 
   **Load TDD lessons** (for use in all TDD phases): read
   `~/.claude/tdd/lessons/LESSONS.md`. If it exists, read all linked lesson
@@ -318,8 +376,14 @@
   - **After 10 cycles without completion**: stop. Report what was and was not
     implemented. Ask the user to either continue (extend the budget), split the
     phase, or proceed to the next phase leaving this one partial.
-  - **When complete**: print `✓ Phase <N> complete`, update the master log with a
-    phase summary paragraph, and move to the next phase.
+  - **When complete**: print `✓ Phase <N> complete`, then:
+    1. Update `last-completed-phase: <N>` in the log frontmatter.
+    2. Append a phase section to the log:
+       ~~~markdown
+       ## Phase <N> — [type] <name>
+       <phase summary: behaviors tested, files written, cycles taken, deviations from spec>
+       ~~~
+    3. Move to the next phase.
 
   ---
 
@@ -336,6 +400,7 @@
 
   Write the master log closing paragraph: what was built, how the design evolved
   from the spec, any deviations or surprises noted during implementation.
+  Then update `status: complete` in the log frontmatter.
 
   ---
 
