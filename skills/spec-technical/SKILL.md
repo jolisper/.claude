@@ -131,7 +131,7 @@ conversation so nothing is lost.
 
 ## Length heuristic
 
-- Single-file change with a clear approach: skip or keep under ~40 lines.
+- Single-file change with a clear approach: omit optional sections, keep under ~40 lines.
 - Multi-module change with some ambiguity: ~80–150 lines.
 - Large cross-cutting change: longer when every section earns its place.
 
