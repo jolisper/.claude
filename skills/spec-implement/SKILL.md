@@ -373,7 +373,7 @@
 
   - **After 5 cycles without completion**: print a check-in and ask the user
     whether the scope is as expected or whether to adjust the phase boundary.
-  - **After 10 cycles without completion**: stop. Report what was and was not
+  - **After 7 cycles without completion**: stop. Report what was and was not
     implemented. Ask the user to either continue (extend the budget), split the
     phase, or proceed to the next phase leaving this one partial.
   - **When complete**: print `✓ Phase <N> complete`, then:
