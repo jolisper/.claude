@@ -1,10 +1,10 @@
 ---
 name: spec-functional
 description: >
-  Write a FUNCTIONAL.md behavioral spec for a feature from the consumer's perspective.
-  Use when the user asks for a functional spec, PRD, behavior doc, FUNCTIONAL.md, or wants
+  Write a functional-spec.md behavioral spec for a feature from the consumer's perspective.
+  Use when the user asks for a functional spec, PRD, behavior doc, or wants
   to define what a feature should do before implementation. Always run before spec-technical —
-  FUNCTIONAL.md is the required input for the technical plan.
+  functional-spec.md is the required input for the technical plan.
 disable-model-invocation: true
 argument-hint: "<definition>"
 allowed-tools: Read Glob Grep AskUserQuestion Write Bash(git rev-parse:*)
@@ -16,7 +16,7 @@ when_to_use: >
 effort: high
 ---
 
-Write a `FUNCTIONAL.md` behavioral spec for a feature. The functional spec defines what the
+Write a `functional-spec.md` behavioral spec for a feature. The functional spec defines what the
 consumer observes, what invariants hold, and what edge cases must be handled — with no
 implementation details. It is the source of truth for what the feature does.
 
@@ -43,16 +43,15 @@ directory as the project root and note it in the output.
 
 **Step 3 — Derive the spec identifier**
 
-Suggest a kebab-case `<id>` derived from the definition (e.g. "inline table rendering
-in block output" → `inline-table-rendering`). A ticket number (e.g. `APP-1234`,
-`GH-567`) is also valid. Present the suggestion and ask for confirmation:
+Suggest a kebab-case `<name>` derived from the definition (e.g. "inline table rendering
+in block output" → `inline-table-rendering`). Present the suggestion and ask for confirmation:
 
 ```
-Spec directory: specs/inline-table-rendering/
-Use this name, or enter a different one (ticket number or kebab-case):
+Initiative directory: initiatives/inline-table-rendering/
+Use this name, or enter a different one (kebab-case):
 ```
 
-Use whatever the user confirms as `<id>`.
+Use whatever the user confirms as `<name>`.
 
 **Step 4 — Gather remaining context**
 
@@ -90,10 +89,10 @@ Does a design mockup exist for this feature?
 
 **Step 6 — Check for an existing spec**
 
-Read `<project-root>/specs/<id>/FUNCTIONAL.md`. If it exists, ask:
+Read `<project-root>/initiatives/<name>/functional-spec.md`. If it exists, ask:
 
 ```
-specs/<id>/FUNCTIONAL.md already exists. How do you want to proceed?
+initiatives/<name>/functional-spec.md already exists. How do you want to proceed?
 (a) Overwrite with a new spec
 (b) Cancel
 ```
@@ -105,7 +104,7 @@ On (b): stop.
 Draft the full spec — do not ask questions during this step. Everything needed was
 gathered in Steps 1–5. Write in one pass.
 
-Write to `<project-root>/specs/<id>/FUNCTIONAL.md`. Create the directory if it does not
+Write to `<project-root>/initiatives/<name>/functional-spec.md`. Create the directory if it does not
 exist.
 
 If the Write fails: report the error and print the full drafted content to the
@@ -162,8 +161,8 @@ one more edge case rather than one fewer.
 - Each invariant describes what the consumer experiences, not what the code does.
 - Avoid implementation details unless directly visible to the consumer.
 - Each section earns its place; omit rather than pad.
-- When updating an existing `FUNCTIONAL.md`: append new invariants at the end — never
-  insert mid-list or renumber. `TECHNICAL.md` references invariants by number;
+- When updating an existing `functional-spec.md`: append new invariants at the end — never
+  insert mid-list or renumber. `technical-spec.md` references invariants by number;
   renumbering silently breaks those references.
 
 ## Length heuristic

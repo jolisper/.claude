@@ -1,26 +1,26 @@
 ---
 name: spec-technical
 description: >
-  Write a TECHNICAL.md plan for a feature by researching the codebase and
-  translating a FUNCTIONAL.md behavioral spec into a grounded implementation plan.
-  Use when the user asks for a technical spec, implementation plan, or TECHNICAL.md.
-  Requires a FUNCTIONAL.md written by spec-functional — stops if none exists.
+  Write a technical-spec.md plan for a feature by researching the codebase and
+  translating a functional-spec.md behavioral spec into a grounded implementation plan.
+  Use when the user asks for a technical spec, implementation plan, or technical-spec.md.
+  Requires a functional-spec.md written by spec-functional — stops if none exists.
 disable-model-invocation: true
 argument-hint: "[<id>]"
 allowed-tools: Read Glob Grep AskUserQuestion Write Bash(git rev-parse:*)
 when_to_use: >
-  Invoke when the user asks for a technical spec, implementation plan, TECHNICAL.md,
-  or wants to plan the implementation of a feature that already has a FUNCTIONAL.md.
-  Always run after spec-functional. Stops if no FUNCTIONAL.md exists for the given feature.
+  Invoke when the user asks for a technical spec, implementation plan, technical-spec.md,
+  or wants to plan the implementation of a feature that already has a functional-spec.md.
+  Always run after spec-functional. Stops if no functional-spec.md exists for the given initiative.
 effort: high
 ---
 
-Write a `TECHNICAL.md` that translates a `FUNCTIONAL.md` behavioral spec into
+Write a `technical-spec.md` that translates a `functional-spec.md` behavioral spec into
 a grounded implementation plan: which parts of the codebase change, what new types or
 interfaces are introduced, how the work is sequenced, and how each behavioral invariant
 from the functional spec will be verified.
 
-Requires a `FUNCTIONAL.md` written by `spec-functional`. Will not proceed without one.
+Requires a `functional-spec.md` written by `spec-functional`. Will not proceed without one.
 
 ## Steps
 
@@ -32,18 +32,18 @@ directory and note it in the output.
 
 **Step 2 — Locate the functional spec**
 
-If `$ARGUMENTS` contains an `<id>`, check for `<project-root>/specs/<id>/FUNCTIONAL.md`.
+If `$ARGUMENTS` contains a `<name>`, check for `<project-root>/initiatives/<name>/functional-spec.md`.
 If `$ARGUMENTS` is empty, ask:
 
 ```
-Which feature spec do you want to derive a technical plan for?
-Enter the spec id (directory name under specs/):
+Which initiative do you want to derive a technical plan for?
+Enter the initiative name (directory name under initiatives/):
 ```
 
-Read the FUNCTIONAL.md if found. If no FUNCTIONAL.md exists for the given id, stop:
+Read the functional-spec.md if found. If no functional-spec.md exists for the given name, stop:
 
 ```
-No FUNCTIONAL.md found at specs/<id>/FUNCTIONAL.md.
+No functional-spec.md found at initiatives/<name>/functional-spec.md.
 Write the functional spec first with /spec-functional, then re-run /spec-technical.
 ```
 
@@ -71,10 +71,10 @@ module or directory to start from before proceeding.
 
 **Step 4 — Check for an existing plan**
 
-Read `<project-root>/specs/<id>/TECHNICAL.md`. If it exists, ask:
+Read `<project-root>/initiatives/<name>/technical-spec.md`. If it exists, ask:
 
 ```
-specs/<id>/TECHNICAL.md already exists. How do you want to proceed?
+initiatives/<name>/technical-spec.md already exists. How do you want to proceed?
 (a) Overwrite with a new plan
 (b) Cancel
 ```
@@ -86,7 +86,7 @@ On (b): stop.
 Draft the full plan — do not ask questions during this step. Everything needed was
 gathered in Steps 1–3. Write in one pass.
 
-Write to `<project-root>/specs/<id>/TECHNICAL.md`.
+Write to `<project-root>/initiatives/<name>/technical-spec.md`.
 
 If the Write fails: report the error and print the full drafted content to the
 conversation so nothing is lost.
@@ -96,7 +96,7 @@ conversation so nothing is lost.
 **Required sections:**
 
 1. **Context** — What's being built, how the current system works in the relevant area,
-   and the most important files with line references. Reference `FUNCTIONAL.md` for
+   and the most important files with line references. Reference `functional-spec.md` for
    consumer-visible behavior rather than restating it. Combine current-state description
    and code orientation into one grounded section.
 
@@ -106,10 +106,10 @@ conversation so nothing is lost.
    path exists.
 
 3. **Testing and validation** — How the implementation will be verified against the
-   functional spec. Reference the numbered Behavior invariants from `FUNCTIONAL.md`
+   functional spec. Reference the numbered Behavior invariants from `functional-spec.md`
    directly (e.g. "Invariant 4 — tested by…") rather than restating them. Each important
    invariant maps to a concrete test or verification step. This is the authoritative
-   testing plan; `FUNCTIONAL.md` intentionally has no Validation section.
+   testing plan; `functional-spec.md` intentionally has no Validation section.
 
 **Optional sections** — include only when they add signal; omit the heading if empty:
 
@@ -126,7 +126,7 @@ conversation so nothing is lost.
 
 - Ground the plan in actual codebase structure, not hypothetical architecture.
 - Prefer concrete implementation guidance over generic design language.
-- Reference `FUNCTIONAL.md` for behavior instead of restating it.
+- Reference `functional-spec.md` for behavior instead of restating it.
 - Each section earns its place; omit rather than pad.
 
 ## Length heuristic

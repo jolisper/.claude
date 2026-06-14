@@ -1,7 +1,7 @@
   ---
   name: spec-implement
   description: >
-    Implements a full TECHNICAL.md spec end-to-end. Decomposes the implementation
+    Implements a full technical-spec.md spec end-to-end. Decomposes the implementation
     sequence into ordered phases, classifies each as scaffolding (build config,
     schema, project setup) or TDD (logic, handlers, components), then drives each
     phase to completion using the right agent strategy. Scaffolding phases use a
@@ -9,16 +9,16 @@
     across all phases. Part of the spec-* family: run after spec-functional and
     spec-technical.
   when_to_use: >
-    When you want to implement a full TECHNICAL.md spec using TDD for logic phases
+    When you want to implement a full technical-spec.md spec using TDD for logic phases
     and a setup agent for scaffolding phases. Run after spec-technical has produced
-    a TECHNICAL.md. Invoke as /spec-implement <path-to-TECHNICAL.md>.
-  argument-hint: "<path to TECHNICAL.md>"
+    a technical-spec.md. Invoke as /spec-implement <path-to-technical-spec.md>.
+  argument-hint: "<path to technical-spec.md>"
   effort: high
   ---
 
   # spec-implement
 
-  Orchestrates the full implementation of a `TECHNICAL.md` spec by decomposing it
+  Orchestrates the full implementation of a `technical-spec.md` spec by decomposing it
   into ordered phases and driving each to completion. Scaffolding phases (build
   config, schema DDL, project setup) are handed to a setup agent. Logic phases
   (pure functions, handlers, API endpoints, UI components) are driven by
@@ -45,10 +45,10 @@
   Resolve `$ARGUMENTS`:
 
   - If empty or whitespace-only, stop:
-    > `spec-implement` requires a TECHNICAL.md path. Invoke as `/spec-implement <path>`.
+    > `spec-implement` requires a technical-spec.md path. Invoke as `/spec-implement initiatives/<name>/technical-spec.md`.
   - Read the file with the `Read` tool. If it does not exist, stop and tell the user.
 
-  Also read the companion `FUNCTIONAL.md` in the same directory if it exists —
+  Also read the companion `functional-spec.md` in the same directory if it exists —
   it provides the behavioral invariants that TDD phases must satisfy.
 
   ---
@@ -249,7 +249,7 @@
 
   - The spec excerpt for this phase (its specific functions, endpoints, or
     components and their expected behavior).
-  - The FUNCTIONAL.md invariants that this phase covers (reference them by number).
+  - The functional-spec.md invariants that this phase covers (reference them by number).
   - A list of all files produced by prior phases that this phase may import or
     depend on.
   - The test runner command for this layer (e.g., `pytest tests/`, `go test ./...`,
