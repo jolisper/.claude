@@ -1,15 +1,15 @@
 ---
 name: obsidian-capture
 description: >
-  Use this skill to capture session context as an Obsidian note. Invoke when
-  the user runs /obsidian-capture to save a finding, decision, or piece of
-  context from the current session to the vault as a structured note.
+  Use this skill to capture session context as an Obsidian note. Invoke only
+  when the user explicitly runs /obsidian-capture or directly asks the model
+  to capture something to Obsidian. Never invoke autonomously.
 argument-hint: "[#tag ...] <hint> [#tag ...]"
-disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write
 when_to_use: >
-  Invoke when the user explicitly runs /obsidian-capture to persist session
-  context, findings, or decisions into their Obsidian vault.
+  Invoke only when the user explicitly runs /obsidian-capture or directly
+  instructs the model to capture/save something to Obsidian. Do not invoke
+  proactively or on the model's own initiative.
 ---
 
 Capture session context as a structured Obsidian note. `$ARGUMENTS` is a mix
