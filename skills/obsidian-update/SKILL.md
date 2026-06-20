@@ -5,7 +5,6 @@ description: >
   Invoke when the user runs /obsidian-update to add findings, decisions, or
   context to a previously captured note. Use /obsidian-search to find the ID first.
 argument-hint: "<id> [hint]"
-disable-model-invocation: true
 allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Write Edit
 when_to_use: >
   Invoke when the user explicitly runs /obsidian-update with a note ID to append
