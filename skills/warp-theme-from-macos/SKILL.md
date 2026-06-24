@@ -8,12 +8,17 @@ description: >
   Invoke when the user wants to create a Warp theme matching their macOS aerial wallpaper.
 disable-model-invocation: true
 allowed-tools: Bash(bash:*) Bash(qlmanage:*) Bash(sips:*) Write Read
+argument-hint: "[--alt]"
 ---
+
+## Arguments
+
+If `$ARGUMENTS` contains `--alt`, use the alternative (pywal-style) color mapper. This affects Step 2 (adds `--alt` to the extract-colors call) and Steps 4–5 (appends `(Alt)` to the theme name and uses `<slug>-alt` as the file stem).
 
 ## Available scripts
 
 - `~/.claude/skills/warp-theme-from-macos/scripts/detect.sh` — confirms aerials provider, resolves UUID, display name, slug, and file paths; outputs `key=value` lines
-- `~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh` — pure-Python PNG decoder; maps dominant thumbnail colors to Warp theme roles; outputs `key=value` hex lines
+- `~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh` — pure-Python PNG decoder; maps dominant thumbnail colors to Warp theme roles; outputs `key=value` hex lines; accepts `--alt` for pywal-style mapping
 
 ## Step 1 — Detect the active aerial
 
@@ -30,13 +35,15 @@ Run `bash ~/.claude/skills/warp-theme-from-macos/scripts/detect.sh` and parse ea
 
 ## Step 2 — Extract dominant colors
 
+If `--alt` was passed, append `--alt` to the extract-colors command below.
+
 If `thumbnail` is non-empty, run:
-`bash ~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh --thumbnail <thumbnail>`
+`bash ~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh --thumbnail <thumbnail> [--alt]`
 
 If `thumbnail` is empty (system default wallpaper), first extract a small still from the video for color sampling:
 `qlmanage -t -s 256 -o /tmp/ <video>`
 Then run:
-`bash ~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh --thumbnail /tmp/<slug>.mov.png`
+`bash ~/.claude/skills/warp-theme-from-macos/scripts/extract-colors.sh --thumbnail /tmp/<slug>.mov.png [--alt]`
 
 Parse each output line as `key=value`. Expected keys: `background`, `foreground`, `accent`, `cursor`, and the 16 ANSI keys (`normal_black` … `bright_white`).
 
@@ -55,10 +62,12 @@ Run these as two separate Bash calls — do not chain them:
 
 ## Step 4 — Write the theme file
 
-Write `~/.warp/themes/<slug>.yaml` with this structure — substitute all `<…>` with values from the previous steps:
+If `--alt` was passed: use `<name> (Alt)` as the theme name and `<slug>-alt` as the file stem. Otherwise use `<name>` and `<slug>`.
+
+Write `~/.warp/themes/<file-stem>.yaml` with this structure — substitute all `<…>` with values from the previous steps:
 
 ```yaml
-name: <name>
+name: <theme-name>
 details: darker
 background: '<background>'
 foreground: '<foreground>'
@@ -90,14 +99,16 @@ terminal_colors:
 
 `opacity` must be the integer `15`, not the float `0.15` — a float silently drops the theme from Warp's list with no error message.
 
+Note: `background_image.path` always uses `<slug>.jpg` (not `<slug>-alt.jpg`) — both variants share the same background image.
+
 ## Step 5 — Confirm
 
 Report:
 
 ```
-Theme created: <name>
-  YAML  → ~/.warp/themes/<slug>.yaml
+Theme created: <theme-name>
+  YAML  → ~/.warp/themes/<file-stem>.yaml
   Image → ~/.warp/themes/<slug>.jpg
 
-To apply: Warp → Settings → Appearance → Theme → Custom → <name>
+To apply: Warp → Settings → Appearance → Theme → Custom → <theme-name>
 ```

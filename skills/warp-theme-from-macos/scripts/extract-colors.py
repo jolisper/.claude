@@ -16,6 +16,8 @@ from collections import Counter
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--thumbnail', required=True, help='Path to thumbnail PNG')
+    p.add_argument('--alt', action='store_true',
+                   help='Use alternative (pywal-style) color mapping')
     return p.parse_args()
 
 
@@ -102,6 +104,22 @@ def lum(r, g, b):
 
 def lighten(r, g, b, amount=40):
     return min(255, r + amount), min(255, g + amount), min(255, b + amount)
+
+
+def darken(r, g, b, factor=0.40):
+    """Multiply each channel by (1 - factor), like pywal's darken_color."""
+    m = 1.0 - factor
+    return int(r * m), int(g * m), int(b * m)
+
+
+def lighten_pct(r, g, b, factor=0.30):
+    """Scale each channel up by factor, like pywal's lighten_color."""
+    return min(255, int(r * (1 + factor))), min(255, int(g * (1 + factor))), min(255, int(b * (1 + factor)))
+
+
+def blend(c1, c2):
+    """Average two RGB tuples, like pywal's blend_color."""
+    return tuple((a + b) // 2 for a, b in zip(c1, c2))
 
 
 def hex_color(r, g, b):
@@ -192,6 +210,81 @@ def map_colors(clusters):
     }
 
 
+def map_colors_v2(clusters):
+    """
+    Pywal-inspired variant:
+    - Background is darkened 40% instead of used raw.
+    - Foreground is blended from the lightest cluster toward #e8e8e8.
+    - Bright variants use percentage-based scaling instead of fixed +N.
+    """
+    by_lum = sorted(clusters, key=lambda c: lum(*c))
+    n = len(by_lum)
+
+    bg = darken(*by_lum[0], factor=0.40)
+
+    lightest = by_lum[-1]
+    fg = blend(lightest, (232, 232, 232))
+    # Keep fg bright enough to be readable
+    if lum(*fg) < 160:
+        fg = (232, 232, 232)
+
+    cursor = lighten_pct(*fg, factor=0.05)
+
+    mid = by_lum[n // 3: 2 * n // 3] or by_lum
+    accent_base = max(mid, key=lambda c: max(c) - min(c))
+    accent = lighten_pct(*accent_base, factor=0.20)
+
+    dominant = by_lum[n // 3]
+    dr, dg, db = dominant
+
+    hue_bases = {
+        'red':     ((max(dr, 130) + dr) // 2, (min(dg, dr - 20) + dg) // 2, (min(db, dr - 20) + db) // 2),
+        'green':   ((min(dr, dg - 20) + dr) // 2, (max(dg, 120) + dg) // 2, (min(db, dg - 20) + db) // 2),
+        'yellow':  ((max(dr, 140) + dr) // 2, (max(dg, 130) + dg) // 2, (min(db, 80) + db) // 2),
+        'blue':    ((min(dr, db - 20) + dr) // 2, (min(dg, db - 20) + dg) // 2, (max(db, 110) + db) // 2),
+        'magenta': ((max(dr, 110) + dr) // 2, (min(dg, dr - 30) + dg) // 2, (max(db, 100) + db) // 2),
+        'cyan':    ((min(dr, dg - 20) + dr) // 2, (max(dg, 120) + dg) // 2, (max(db, 120) + db) // 2),
+    }
+
+    normal_colors = {}
+    used = {by_lum[0], by_lum[-1]}
+    for hue in ('red', 'green', 'yellow', 'blue', 'magenta', 'cyan'):
+        candidates = [c for c in clusters if c not in used]
+        if candidates:
+            best = max(candidates, key=lambda c: hue_score(*c, hue))
+            if hue_score(*best, hue) > 20:
+                normal_colors[hue] = best
+                used.add(best)
+                continue
+        normal_colors[hue] = hue_bases[hue]
+
+    normal_black = bg
+    normal_white = blend(by_lum[n // 2] if n > 1 else by_lum[-1], (238, 238, 238))
+
+    return {
+        'background':     bg,
+        'foreground':     fg,
+        'accent':         accent,
+        'cursor':         cursor,
+        'normal_black':   normal_black,
+        'normal_red':     normal_colors['red'],
+        'normal_green':   normal_colors['green'],
+        'normal_yellow':  normal_colors['yellow'],
+        'normal_blue':    normal_colors['blue'],
+        'normal_magenta': normal_colors['magenta'],
+        'normal_cyan':    normal_colors['cyan'],
+        'normal_white':   normal_white,
+        'bright_black':   lighten_pct(*normal_black, factor=0.30) if lum(*normal_black) > 10 else lighten(*normal_black, 30),
+        'bright_red':     lighten_pct(*normal_colors['red'], factor=0.25),
+        'bright_green':   lighten_pct(*normal_colors['green'], factor=0.25),
+        'bright_yellow':  lighten_pct(*normal_colors['yellow'], factor=0.25),
+        'bright_blue':    lighten_pct(*normal_colors['blue'], factor=0.25),
+        'bright_magenta': lighten_pct(*normal_colors['magenta'], factor=0.25),
+        'bright_cyan':    lighten_pct(*normal_colors['cyan'], factor=0.25),
+        'bright_white':   lighten_pct(*normal_white, factor=0.15),
+    }
+
+
 def main():
     args = parse_args()
 
@@ -208,7 +301,8 @@ def main():
         print("Error: no pixels found in thumbnail", file=sys.stderr)
         sys.exit(1)
 
-    colors = map_colors(clusters)
+    mapper = map_colors_v2 if args.alt else map_colors
+    colors = mapper(clusters)
     for key, rgb in colors.items():
         print(f"{key}={hex_color(*rgb)}")
 
