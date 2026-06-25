@@ -22,6 +22,8 @@ If `$ARGUMENTS` contains `--alt`, use the alternative (pywal-style) color mapper
 
 ## Step 1 — Detect the active aerial
 
+Always run this step fresh, even if this skill ran earlier in the same conversation. The wallpaper may have changed since then — never substitute a previous run's result or infer the current wallpaper from existing files in `~/.warp/themes/`.
+
 Run `bash ~/.claude/skills/warp-theme-from-macos/scripts/detect.sh` and parse each output line as `key=value`.
 
 **If `status=not-aerial`:** stop and tell the user:
