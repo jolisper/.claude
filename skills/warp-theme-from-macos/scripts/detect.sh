@@ -31,21 +31,42 @@ import plistlib, pathlib, sys
 p = pathlib.Path('$PLIST')
 with open(p, 'rb') as f:
     d = plistlib.load(f)
-choices = (d.get('AllSpacesAndDisplays') or d.get('SystemDefault', {})).get('Linked', {}).get('Content', {}).get('Choices', [{}])
+root = d.get('AllSpacesAndDisplays') or d.get('SystemDefault', {})
+choices = root.get('Desktop', root.get('Linked', {})).get('Content', {}).get('Choices', [{}])
 print(choices[0].get('Provider', '') if choices else '')
 " 2>/dev/null || true)
 
 # ── Aerial ────────────────────────────────────────────────────────────────────
 
 if [[ "$PROVIDER" == "com.apple.wallpaper.choice.aerials" ]]; then
-  VIDEO=$(ls -t "$AERIALS_DIR/videos/"*.mov 2>/dev/null | head -1 || true)
+  UUID=$(python3 -c "
+import plistlib, pathlib
+p = pathlib.Path('$PLIST')
+with open(p, 'rb') as f:
+    d = plistlib.load(f)
+root = d.get('AllSpacesAndDisplays') or d.get('SystemDefault', {})
+choices = root.get('Desktop', root.get('Linked', {})).get('Content', {}).get('Choices', [{}])
+choice = choices[0] if choices else {}
+config_bytes = choice.get('Configuration', b'')
+if config_bytes:
+    config = plistlib.loads(config_bytes)
+    print(config.get('assetID', ''))
+" 2>/dev/null || true)
+
+  VIDEO=""
+  if [[ -n "$UUID" && -f "$AERIALS_DIR/videos/$UUID.mov" ]]; then
+    VIDEO="$AERIALS_DIR/videos/$UUID.mov"
+  else
+    VIDEO=$(ls -t "$AERIALS_DIR/videos/"*.mov 2>/dev/null | head -1 || true)
+    [[ -n "$VIDEO" ]] && UUID=$(basename "$VIDEO" .mov)
+  fi
+
   if [[ -z "$VIDEO" ]]; then
     echo "status=error"
     echo "reason=No aerial video found in $AERIALS_DIR/videos/ — the aerial may still be downloading"
     exit 0
   fi
 
-  UUID=$(basename "$VIDEO" .mov)
   THUMBNAIL="$AERIALS_DIR/thumbnails/$UUID.png"
 
   if [[ ! -f "$THUMBNAIL" ]]; then
