@@ -92,6 +92,8 @@ Wait for the user's response. If (b), apply the requested changes, show the upda
 
 ## Phase 5: Write
 
+The skill file is always named `SKILL.md` (uppercase). Never write `skill.md` or any other casing.
+
 On (a):
 
 1. Determine the install path from Phase 2 (global or project-local) and the confirmed skill name.

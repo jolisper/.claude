@@ -32,7 +32,7 @@
   - Do not call `Write`, `Edit`, or `Bash` to create or modify any implementation,
     test, build, or config file.
   - Do not use heredocs, `cat >`, `tee`, or any shell command to write code.
-  - The only files you may write are the master log (`initiatives/<name>/implement-log.md`)
+  - The only files you may write are the master log (`initiatives/<name>/logbook.md`)
     and phase log entries within it.
   - All code writing goes through the `Agent` tool. No exceptions.
 
@@ -171,13 +171,13 @@
   13. [TDD]      frontend/src/pages/TaskListPage.tsx — fetch lifecycle, render
   14. [TDD]      frontend/src/components/* — TaskRow, FilterBar, NewTaskForm
 
-  Then check whether `initiatives/<name>/implement-log.md` exists and read its
+  Then check whether `initiatives/<name>/logbook.md` exists and read its
   frontmatter.
 
   **If an existing log is found**, read `last-completed-phase` and present:
 
   ```
-  Found an existing session (initiatives/<name>/implement-log.md).
+  Found an existing session (initiatives/<name>/logbook.md).
   Last completed phase: <N>.
 
   (a) Resume from phase <N+1>
@@ -205,13 +205,13 @@
 
   ## Step 5 — Initialize or Resume the Log
 
-  The log lives at `initiatives/<name>/implement-log.md`, co-located with the
+  The log lives at `initiatives/<name>/logbook.md`, co-located with the
   specs. `<name>` is the initiative directory — the parent directory of the
   `technical-spec.md`.
 
   **If starting fresh** (no existing log, or user chose "start over" in Step 4):
 
-  Write `initiatives/<name>/implement-log.md` with this structure:
+  Write `initiatives/<name>/logbook.md` with this structure:
 
   ~~~markdown
   ---
@@ -401,6 +401,16 @@
   Write the master log closing paragraph: what was built, how the design evolved
   from the spec, any deviations or surprises noted during implementation.
   Then update `status: complete` in the log frontmatter.
+
+  Then append a `## Implementation files` section listing every file written or
+  modified across all phases, one per bullet:
+
+  ~~~markdown
+  ## Implementation files
+
+  - path/to/file1
+  - path/to/file2
+  ~~~
 
   ---
 

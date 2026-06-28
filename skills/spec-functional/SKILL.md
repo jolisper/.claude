@@ -53,7 +53,22 @@ Use this name, or enter a different one (kebab-case):
 
 Use whatever the user confirms as `<name>`.
 
-**Step 4 — Gather remaining context**
+**Step 4 — Auto-read initiative context**
+
+Attempt to read `<project-root>/initiatives/<name>/initiative.md`.
+
+- If found: print `Found initiatives/<name>/initiative.md — using it as context.` then
+  incorporate its content into the definition before proceeding. If `$ARGUMENTS` was
+  empty, the initiative file alone serves as the definition — do not ask for one.
+- If not found: proceed silently, no message.
+- If the read fails (file exists but cannot be read): report the error and ask:
+  ```
+  Could not read initiatives/<name>/initiative.md. How do you want to proceed?
+  (a) Continue without it
+  (b) Cancel
+  ```
+
+**Step 5 — Gather remaining context**
 
 Using the definition as a starting point, identify what is still needed before drafting.
 Ask only for what cannot be inferred from the definition — in a single `AskUserQuestion`
@@ -72,7 +87,7 @@ gaps is better than several sequential questions.
 Each question in the `AskUserQuestion` call must have at least 2 distinct options.
 Do not include preamble or summary entries — every entry must be a real question.
 
-**Step 5 — Ask about design mockups (UI features only)**
+**Step 6 — Ask about design mockups (UI features only)**
 
 If the feature has visual interaction or UI states, ask:
 
@@ -87,7 +102,7 @@ Does a design mockup exist for this feature?
 - If the feature is purely non-visual (data model, API, CLI without interactive output):
   skip this step entirely.
 
-**Step 6 — Check for an existing spec**
+**Step 7 — Check for an existing spec**
 
 Read `<project-root>/initiatives/<name>/functional-spec.md`. If it exists, ask:
 
@@ -99,10 +114,10 @@ initiatives/<name>/functional-spec.md already exists. How do you want to proceed
 
 On (b): stop.
 
-**Step 7 — Draft and write FUNCTIONAL.md**
+**Step 8 — Draft and write FUNCTIONAL.md**
 
 Draft the full spec — do not ask questions during this step. Everything needed was
-gathered in Steps 1–5. Write in one pass.
+gathered in Steps 1–6. Write in one pass.
 
 Write to `<project-root>/initiatives/<name>/functional-spec.md`. Create the directory if it does not
 exist.
