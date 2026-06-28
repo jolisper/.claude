@@ -9,10 +9,10 @@ disable-model-invocation: true
 argument-hint: "<definition>"
 allowed-tools: Read Glob Grep AskUserQuestion Write Bash(git rev-parse:*)
 when_to_use: >
-  Invoke when the user asks for a functional spec, PRD, behavioral contract, FUNCTIONAL.md,
+  Invoke when the user asks for a functional spec, PRD, behavioral contract, functional-spec.md,
   or wants to define feature behavior before writing code. Also invoke when the user
   has a feature description that needs to be formalized as a numbered, testable spec.
-  Run this skill first — spec-technical requires FUNCTIONAL.md to exist.
+  Run this skill first — spec-technical requires functional-spec.md to exist.
 effort: high
 ---
 
@@ -43,8 +43,18 @@ directory as the project root and note it in the output.
 
 **Step 3 — Derive the spec identifier**
 
-Suggest a kebab-case `<name>` derived from the definition (e.g. "inline table rendering
-in block output" → `inline-table-rendering`). Present the suggestion and ask for confirmation:
+If `$ARGUMENTS` is (or contains) a path to an `initiatives/<name>/initiative.md` file —
+as produced by `spec-initiative`'s `Next:` pointer — **inherit `<name>` from that file's
+parent directory** instead of deriving it from the definition text. This keeps every stage
+under the same `initiatives/<name>/` directory. Present it as the default:
+
+```
+Initiative directory: initiatives/<name>/ (from initiative.md)
+Use this name, or enter a different one (kebab-case):
+```
+
+Otherwise, suggest a kebab-case `<name>` derived from the definition (e.g. "inline table
+rendering in block output" → `inline-table-rendering`) and present the suggestion:
 
 ```
 Initiative directory: initiatives/inline-table-rendering/
@@ -114,7 +124,7 @@ initiatives/<name>/functional-spec.md already exists. How do you want to proceed
 
 On (b): stop.
 
-**Step 8 — Draft and write FUNCTIONAL.md**
+**Step 8 — Draft and write functional-spec.md**
 
 Draft the full spec — do not ask questions during this step. Everything needed was
 gathered in Steps 1–6. Write in one pass.
@@ -125,7 +135,14 @@ exist.
 If the Write fails: report the error and print the full drafted content to the
 conversation so nothing is lost.
 
-## FUNCTIONAL.md structure
+After the write succeeds, output:
+
+```
+initiatives/<name>/functional-spec.md written.
+Next: /spec-technical <name>
+```
+
+## functional-spec.md structure
 
 **Required sections:**
 
@@ -143,7 +160,7 @@ conversation so nothing is lost.
   collecting.
 
 Do not include Validation, Testing, or Success criteria sections — those belong in
-`TECHNICAL.md`.
+`technical-spec.md`.
 
 ## The Behavior section
 
@@ -176,6 +193,9 @@ one more edge case rather than one fewer.
 - Each invariant describes what the consumer experiences, not what the code does.
 - Avoid implementation details unless directly visible to the consumer.
 - Each section earns its place; omit rather than pad.
+- Interaction convention: `AskUserQuestion` is reserved for the single multi-gap
+  context-gathering step (Step 5). Every binary confirm/overwrite/cancel gate uses a
+  plain-text (a)/(b) menu — never `AskUserQuestion`. `spec-technical` follows the same rule.
 - When updating an existing `functional-spec.md`: append new invariants at the end — never
   insert mid-list or renumber. `technical-spec.md` references invariants by number;
   renumbering silently breaks those references.

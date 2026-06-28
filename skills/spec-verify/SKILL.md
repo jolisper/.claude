@@ -72,7 +72,7 @@ functional-spec.md has no numbered Behavior invariants to verify.
 
 ## Step 6 — Dynamic phase
 
-Read `<root>/.claude/skills/run-<name>/skill.md` and follow its instructions to launch
+Read `<root>/.claude/skills/run-<name>/SKILL.md` and follow its instructions to launch
 the app. The run recipe defines the test environment — do not modify it.
 
 > The dynamic phase may require tool permissions beyond this skill's `allowed-tools`
@@ -111,5 +111,11 @@ Invariant N — <first line of invariant text>
 ```
 
 "Uncovered" = static found no test AND dynamic recorded `skip — app did not start`.
+
+After printing the report, output:
+
+```
+Next: /spec-archive <name>
+```
 
 `spec-verify` produces no other side effects — safe to run multiple times.

@@ -53,7 +53,7 @@ Use Glob to locate source files at the project root. If no source files are foun
 
 ```
 No codebase found at the project root.
-TECHNICAL.md requires an existing codebase to research.
+technical-spec.md requires an existing codebase to research.
 ```
 
 Otherwise, read the codebase to understand:
@@ -66,7 +66,7 @@ Otherwise, read the codebase to understand:
 Use Read and Grep to inspect key files. Do not guess about existing architecture.
 Reference specific file paths and line numbers in the plan.
 
-If the feature area is unclear from the FUNCTIONAL.md and codebase, ask the user which
+If the feature area is unclear from the functional-spec.md and codebase, ask the user which
 module or directory to start from before proceeding.
 
 **Step 4 — Check for an existing plan**
@@ -81,7 +81,7 @@ initiatives/<name>/technical-spec.md already exists. How do you want to proceed?
 
 On (b): stop.
 
-**Step 5 — Draft and write TECHNICAL.md**
+**Step 5 — Draft and write technical-spec.md**
 
 Draft the full plan — do not ask questions during this step. Everything needed was
 gathered in Steps 1–3. Write in one pass.
@@ -91,7 +91,14 @@ Write to `<project-root>/initiatives/<name>/technical-spec.md`.
 If the Write fails: report the error and print the full drafted content to the
 conversation so nothing is lost.
 
-## TECHNICAL.md structure
+After the write succeeds, output:
+
+```
+initiatives/<name>/technical-spec.md written.
+Next: /spec-implement <name>
+```
+
+## technical-spec.md structure
 
 **Required sections:**
 
@@ -105,7 +112,20 @@ conversation so nothing is lost.
    follows existing patterns. Call out tradeoffs explicitly when more than one reasonable
    path exists.
 
-3. **Testing and validation** — How the implementation will be verified against the
+3. **Implementation sequence** — An explicitly ordered, numbered list of phases that
+   `spec-implement` consumes directly. Each phase is one line naming the file(s) or output
+   it produces, ordered by dependency (scaffolding and schema before the logic that depends
+   on them). Keep one phase per cohesive unit of work; do not bury the ordering inside the
+   Proposed changes prose. Example:
+
+   ```
+   1. package manifest and lockfile
+   2. src/ directory layout
+   3. src/validation.ts — input validators
+   4. src/handlers/tasks.ts — CRUD endpoints
+   ```
+
+4. **Testing and validation** — How the implementation will be verified against the
    functional spec. Reference the numbered Behavior invariants from `functional-spec.md`
    directly (e.g. "Invariant 4 — tested by…") rather than restating them. Each important
    invariant maps to a concrete test or verification step. This is the authoritative
@@ -127,6 +147,8 @@ conversation so nothing is lost.
 - Ground the plan in actual codebase structure, not hypothetical architecture.
 - Prefer concrete implementation guidance over generic design language.
 - Reference `functional-spec.md` for behavior instead of restating it.
+- `spec-implement` parses the **Implementation sequence** section by name to derive its
+  phase plan — keep its heading exact and its list ordered by dependency.
 - Each section earns its place; omit rather than pad.
 
 ## Length heuristic
