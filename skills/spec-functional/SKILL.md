@@ -114,7 +114,7 @@ Does a design mockup exist for this feature?
 
 **Step 7 — Check for an existing spec**
 
-Read `<project-root>/initiatives/<name>/functional-spec.md`. If it exists, ask:
+Run `bash -c "test -f <project-root>/initiatives/<name>/functional-spec.md && echo exists || echo not-found"` to check whether the file exists. If the output is `exists`, ask:
 
 ```
 initiatives/<name>/functional-spec.md already exists. How do you want to proceed?

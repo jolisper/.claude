@@ -68,7 +68,7 @@ Never ask more than one round.
 
 **Step 5 — Check for an existing initiative**
 
-Read `<project-root>/initiatives/<name>/initiative.md`. If it exists, ask:
+Run `bash -c "test -f <project-root>/initiatives/<name>/initiative.md && echo exists || echo not-found"` to check whether the file exists. If the output is `exists`, ask:
 
 ```
 initiatives/<name>/initiative.md already exists. How do you want to proceed?

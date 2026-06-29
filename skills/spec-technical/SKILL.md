@@ -71,7 +71,7 @@ module or directory to start from before proceeding.
 
 **Step 4 — Check for an existing plan**
 
-Read `<project-root>/initiatives/<name>/technical-spec.md`. If it exists, ask:
+Run `bash -c "test -f <project-root>/initiatives/<name>/technical-spec.md && echo exists || echo not-found"` to check whether the file exists. If the output is `exists`, ask:
 
 ```
 initiatives/<name>/technical-spec.md already exists. How do you want to proceed?
