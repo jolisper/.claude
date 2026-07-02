@@ -4,13 +4,13 @@ description: >
   Close out a completed spec-workflow initiative. Checks completeness and uncommitted
   changes, appends a retrospective to the implement log, and moves initiatives/<name>/
   to initiatives/_archive/<name>/. Use as the final step in the spec-workflow pipeline,
-  after spec-verify.
+  after spec-verify-static and spec-verify-dynamic.
 disable-model-invocation: true
 argument-hint: "<initiative-name>"
 allowed-tools: Read Edit Bash(git rev-parse:*) Bash(git status:*) Bash(ls:*) Bash(mkdir:*) Bash(mv:*)
 when_to_use: >
-  Invoke as the final step of a spec-workflow initiative, after spec-verify confirms
-  all invariants pass. Use when the user wants to formally close out and archive an
+  Invoke as the final step of a spec-workflow initiative, after spec-verify-static and
+  spec-verify-dynamic confirm all invariants pass. Use when the user wants to formally close out and archive an
   initiative.
 effort: high
 ---

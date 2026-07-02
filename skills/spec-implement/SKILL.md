@@ -441,7 +441,7 @@ modified across all phases, one per bullet:
 Finally, print:
 
 ```
-Next: write .claude/skills/run-<name>/SKILL.md, then /spec-verify <name>
+Next: /spec-verify-static <name>, then write .claude/skills/run-<name>/SKILL.md and /spec-verify-dynamic <name>
 ```
 
 ---
