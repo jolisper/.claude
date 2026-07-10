@@ -49,7 +49,7 @@ def call_model(prompt: str) -> str:
             input=prompt,
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=55,
             env={**os.environ, "ENGLISH_TUTOR_RUNNING": "1"},
         )
         return result.stdout.strip()
