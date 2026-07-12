@@ -189,7 +189,7 @@ as "no existing log" and take the fresh path below. Step 5 merges the implementa
 into that stub rather than overwriting it.
 
 **If an existing implementation log is found** (frontmatter has `last-completed-phase`),
-read that value as `<N>` and present:
+read that value as `<N>` and print — do not use `AskUserQuestion`:
 
 ```
 Found an existing session (initiatives/<name>/logbook.md).
@@ -201,11 +201,10 @@ Last completed phase: <N>.
 (d) Cancel
 ```
 
-On (b): ask which phase number.
-On (c): proceed as if no log existed.
-On (d): stop.
+Wait for a text reply. On (b): ask which phase number. On (c): proceed as if no log existed. On (d): stop.
 
-**If no implementation log is found** (no `logbook.md`, or only an initiative stub), present:
+**If no implementation log is found** (no `logbook.md`, or only an initiative stub), print —
+do not use `AskUserQuestion`:
 
 ```
 (a) Start from the first pending phase
@@ -213,8 +212,7 @@ On (d): stop.
 (c) Cancel
 ```
 
-On (b): ask which phase number and skip earlier phases.
-On (c): stop.
+Wait for a text reply. On (b): ask which phase number and skip earlier phases. On (c): stop.
 
 ---
 
