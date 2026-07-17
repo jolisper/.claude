@@ -100,9 +100,15 @@ On (a) — **update flow** (skip Steps 5–11 entirely after this):
   Append the update block after the last line of EXISTING_CONTENT.
   Write the result back to `{VAULT}/logbook/Journal {DATE}.md`.
 
+  Compute:
+  - **VAULT_NAME** = the last path segment of VAULT.
+  - **URI_PATH** = `logbook/Journal {DATE}` with the `.md` extension stripped.
+  - Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
+
   Confirm:
   ```
   Updated → Journal {DATE}.md  (id: {id})
+  obsidian://open?vault={VAULT_NAME}&file={URI_PATH}
   ```
   Stop.
 
@@ -210,9 +216,15 @@ type: journal
 
 Write the composed note to `{VAULT}/logbook/Journal {DATE}.md`.
 
+Compute:
+- **VAULT_NAME** = the last path segment of VAULT.
+- **URI_PATH** = `logbook/Journal {DATE}` with the `.md` extension stripped.
+- Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
+
 Confirm:
 ```
 Captured → Journal {DATE}.md  (id: {ID})
+obsidian://open?vault={VAULT_NAME}&file={URI_PATH}
 ```
 
 ## Failure contract

@@ -109,8 +109,14 @@ Read the current `updated:` value from the note's frontmatter. Replace it with
 
 ## Step 9 — Confirm
 
+Compute:
+- **VAULT_NAME** = the last path segment of VAULT.
+- **URI_PATH** = NOTE_PATH relative to VAULT, with the `.md` extension stripped.
+- Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
+
 ```
 Updated → {filename}  (id: {id})
+obsidian://open?vault={VAULT_NAME}&file={URI_PATH}
 ```
 
 ## Failure contract

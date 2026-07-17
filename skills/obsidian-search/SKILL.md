@@ -83,10 +83,17 @@ For each result, read the note and extract:
 
 ## Step 7 — Present results
 
+For each result, compute:
+- **VAULT_NAME** = the last path segment of VAULT.
+- **URI_PATH** = the result's file path relative to VAULT, with the `.md`
+  extension stripped.
+- Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
+
 ```
 [1] {filename}  (id: {id})
     Tags: {tag-link line}
     "{snippet}"
+    obsidian://open?vault={VAULT_NAME}&file={URI_PATH}
 
 [2] ...
 ```
