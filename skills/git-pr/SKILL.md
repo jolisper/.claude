@@ -27,7 +27,7 @@ If any of these conditions apply, stop immediately and explain the reason to the
 
 ## Step 1 — Gather and draft (forked context)
 
-Launch a subagent using the `Agent` tool with `allowed-tools: Bash(git rev-parse:*) Bash(git log:*) Bash(git remote:*) Bash(git show:*)` and the following prompt verbatim:
+Launch a subagent using the `Agent` tool with `allowed-tools: Bash(git rev-parse:*) Bash(git log:*) Bash(git remote:*) Bash(git show:*) Bash(git merge-base:*) Bash(git fetch:*)` and the following prompt verbatim:
 
 ---
 Run the steps below and return the structured output at the end. Use only what the git commands return — do not draw on any prior context.
@@ -55,11 +55,27 @@ If not found, fall back to `main`. If `main` is also the source branch, fall bac
 
 **C — Collect commits**
 
-Run:
+Run first, to make sure `origin/<base-branch>` reflects the actual remote state before comparing:
+```
+git fetch origin <base-branch>
+```
+If this fails (e.g. no network), continue anyway — treat `origin/<base-branch>` as "last known" and proceed with the comparison below.
+
+Run each separately:
 ```
 git rev-parse --verify <base-branch>
+git rev-parse --verify origin/<base-branch>
 ```
-If non-zero, use `origin/<base-branch>` as the resolved ref; otherwise use `<base-branch>`.
+
+Resolve which ref to diff against:
+- Local `<base-branch>` doesn't exist: resolved ref = `origin/<base-branch>`. If that also doesn't exist, output `ERROR: cannot resolve base branch <base-branch> locally or on origin.`
+- Local exists but `origin/<base-branch>` doesn't exist: resolved ref = `<base-branch>`.
+- Both exist and their short SHAs (`git rev-parse --short <ref>`) match: resolved ref = `<base-branch>`.
+- Both exist but SHAs differ: the local branch is stale or diverged from origin — **always prefer `origin/<base-branch>`** for the diff, since that's the true merge target reviewers will see. Run `git merge-base --is-ancestor <base-branch> origin/<base-branch>` to classify:
+  - Exit 0 (local is behind): resolved ref = `origin/<base-branch>`. Set WARNING to:
+    `Local <base-branch> is outdated (at <local-short-sha>) — origin/<base-branch> is ahead. Using origin/<base-branch> for the diff.`
+  - Non-zero (diverged): resolved ref = `origin/<base-branch>`. Set WARNING to:
+    `Local <base-branch> (<local-short-sha>) differs from origin/<base-branch> (<origin-short-sha>) — using origin/<base-branch> for the diff.`
 
 Then run both separately:
 ```
@@ -91,11 +107,12 @@ Using only the commit data above — not any prior context — draft:
 
 If a commit subject is unclear, run `git show <hash>` to inspect the diff before including a claim.
 
-Return exactly this format:
+Return exactly this format (omit the `WARNING` line entirely if no warning was set in step C):
 
 ```
 SOURCE: <source-branch>
 BASE: <base-branch>
+WARNING: <warning text from step C, if any>
 WORKSPACE: <workspace>
 REPO: <repo-slug>
 TITLE: <title>
@@ -106,7 +123,12 @@ DESCRIPTION:
 
 If the subagent output starts with `ERROR:`, stop and show the error to the user.
 
-Otherwise parse `SOURCE`, `BASE`, `WORKSPACE`, `REPO`, `TITLE`, and `DESCRIPTION` from the output.
+Otherwise parse `SOURCE`, `BASE`, `WARNING` (if present), `WORKSPACE`, `REPO`, `TITLE`, and `DESCRIPTION` from the output.
+
+If `WARNING` is present, print it before the preview:
+```
+⚠️  <WARNING>
+```
 
 ## Step 2 — Preview and confirm
 
