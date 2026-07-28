@@ -143,10 +143,9 @@ Compute:
 - **URI_PATH** = `notes/{FILENAME}` with the `.md` extension stripped.
 - Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
 
-Confirm:
+Confirm (as a markdown link so it renders clickable):
 ```
-Captured → {FILENAME}  (id: {ID})
-obsidian://open?vault={VAULT_NAME}&file={URI_PATH}
+[Captured → {FILENAME}  (id: {ID})](obsidian://open?vault={VAULT_NAME}&file={URI_PATH})
 ```
 
 ## Failure contract
