@@ -39,7 +39,9 @@ Run each of these commands separately:
    - Even if the user explicitly asked to rebase, still surface this warning — the user may not have considered that others are tracking this branch.
    - On (b): stop.
 5. `git fetch origin`
-6. `git log HEAD..origin/<base> --oneline` — if output is empty after fetch, report "Already up to date" and stop.
+6. **Local base staleness check**: Run `git rev-parse --verify <base>` and `git rev-parse --verify origin/<base>`.
+   - If local `<base>` exists and its SHA differs from `origin/<base>`, run `git rev-list --count <base>..origin/<base>` and note to the user: "Local `<base>` is N commit(s) behind `origin/<base>` — rebasing against origin's copy." This is informational only; do not update local `<base>`.
+7. `git log HEAD..origin/<base> --oneline` — if output is empty after fetch, report "Already up to date" and stop.
 
 ## Step 2 — Handle dirty working tree
 
