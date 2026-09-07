@@ -5,11 +5,13 @@ description: >
   when the user explicitly runs /obsidian-capture or directly asks the model
   to capture something to Obsidian. Never invoke autonomously.
 argument-hint: "[#tag ...] <hint> [#tag ...]"
-allowed-tools: Read Glob Grep Bash(date:*) Bash(bash:*) Bash(mkdir:*) Write
+disable-model-invocation: false
+allowed-tools: Read Grep Bash(date:*) Bash(bash:*) Write
 when_to_use: >
-  Invoke only when the user explicitly runs /obsidian-capture or directly
-  instructs the model to capture/save something to Obsidian. Do not invoke
-  proactively or on the model's own initiative.
+  Do not invoke proactively or on the model's own initiative — only on an
+  explicit /obsidian-capture or a direct instruction to capture/save
+  something to Obsidian.
+effort: medium
 ---
 
 Capture session context as a structured Obsidian note. `$ARGUMENTS` is a mix
@@ -56,31 +58,20 @@ Run `date +%Y%m%d%H%M` → **ID**
 
 Run `date +%Y-%m-%d` → **DATE**
 
-## Step 4 — Ensure directories exist
+## Step 4 — Prepare vault (directories, tag stubs, ID collision)
 
-Run `mkdir -p {VAULT}/notes`. On failure: report the error and stop.
+Run `bash ~/.claude/skills/obsidian-capture/scripts/prepare-capture.sh --vault "{VAULT}" --id "{ID}" --tags "{comma-joined TAGS, or omit --tags if TAGS is empty}"`.
 
-Run `bash -c "test -d '{VAULT}/@topics'"`. If non-zero:
-Run `mkdir -p {VAULT}/@topics`. On failure: report the error and stop.
+This creates `{VAULT}/notes` and `{VAULT}/@topics` if missing, creates any
+missing tag stub files (`# @{tag}`), and resolves an ID collision by
+appending the next available letter suffix (`a`, `b`, ...). On failure
+(non-zero exit): report the stderr message and stop.
 
-## Step 5 — Ensure tag stubs exist
+On success, parse `id=<value>` from the `status=done` stdout line and set
+**ID** to that value (it may differ from the ID generated in Step 3 if a
+collision was resolved).
 
-For each tag in TAGS:
-
-Run `bash -c "test -f '{VAULT}/@topics/@{tag}.md'"`. If non-zero:
-Write to `{VAULT}/@topics/@{tag}.md`:
-```markdown
-# @{tag}
-```
-No confirmation needed.
-
-## Step 6 — ID collision check
-
-Use Grep to search `{VAULT}` for the line `^id: {ID}` in frontmatter.
-If any file matches: append the next available letter suffix (`a`, `b`, ...)
-and repeat until no match is found. Use the first available value as ID.
-
-## Step 7 — Derive title and filename
+## Step 5 — Derive title and filename
 
 Synthesize a **TITLE**: a short, coherent, properly capitalized title that
 describes what the note is about. Use HINT and session context as input —
@@ -99,7 +90,7 @@ FILENAME = {TITLE}.md
 Strip any characters invalid in filenames (`/ : ? * \ " < > |`). Collapse
 consecutive spaces to one. Trim leading and trailing spaces.
 
-## Step 8 — Compose note
+## Step 6 — Compose note
 
 Draw on session context, using HINT as a spotlight. Capture only what the
 hint points to — not the full session. The note must be self-contained: a
@@ -134,7 +125,11 @@ type: capture
 
 Omit the tag-link line entirely if TAGS is empty.
 
-## Step 9 — Write and confirm
+## Step 7 — Write and confirm
+
+Run `bash -c "test -f '{VAULT}/notes/{FILENAME}'"`. If it exists (a prior
+note derived the same title), append the ID to disambiguate: set
+`FILENAME = {TITLE} ({ID}).md`. Never overwrite an existing note silently.
 
 Write the composed note to `{VAULT}/notes/{FILENAME}`.
 
@@ -153,4 +148,4 @@ Confirm (as a markdown link so it renders clickable):
 - **Vault not configured:** show the setup message from Step 1 and stop.
 - **Write fails:** print the full composed note content to the conversation
   so the user can paste it manually. Never silently discard content.
-- **mkdir fails:** report the error and stop.
+- **prepare-capture.sh fails:** report the stderr message and stop.
