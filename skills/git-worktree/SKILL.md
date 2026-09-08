@@ -9,7 +9,7 @@ description: >
 disable-model-invocation: true
 argument-hint: "[add <branch> [path] | list | remove <branch> | prune | close [<branch>]]"
 allowed-tools: Bash(git worktree:*) Bash(git rev-parse:*) Bash(git branch:*) Bash(git log:*) Bash(git status:*) Bash(git merge:*) Bash(git -C:*) Bash(lsof:*) Bash(printf:*) Bash(bash:*) Read
-skills: git-merge, git-commit
+skills: git-merge
 when_to_use: >
   Invoke when the user wants to add, list, remove, prune, or close out a git
   worktree, or asks about managing multiple checkouts of a repository.
@@ -291,9 +291,16 @@ Check for in-progress git operations:
    (b) Proceed without committing (changes will be lost)
    (c) Cancel
    ```
-   On (a): Read `~/.claude/skills/git-commit/SKILL.md` and follow its full protocol
-   with `--auto`. After the commit completes, continue to Step 2.
-   (git-commit uses only git Bash commands and Read; all required tools are covered by this skill's allowed-tools.)
+   On (a): commit the changes, then continue to Step 2:
+     1. `git -C <path> add -A`
+     2. `git -C <path> diff --cached` — read the full output to understand what's being committed.
+     3. Sensitive data scan: read `~/.claude/skills/git-commit/references/sensitive-patterns.md`
+        and scan the diff's added lines and staged filenames for the credential
+        patterns and sensitive file types it lists. If anything is found, show
+        its "Warning block format" and stop for confirmation before committing.
+     4. Propose a Conventional Commits message (`<type>[scope]: <description>`)
+        based on the diff, then commit: `git -C <path> commit -m "<message>"`
+        (no Co-Authored-By trailer).
    Stop on (c).
 
    *Normal mode:*

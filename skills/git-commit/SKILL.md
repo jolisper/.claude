@@ -5,8 +5,10 @@ description: >
   Invoke only for direct requests like "commit my changes", "make a commit", or
   "stage and commit" — never proactively. Analyzes unstaged changes, groups them
   into logical commits, proposes a Conventional Commits message, and confirms
-  before committing. When invoked by the model (not via /git-commit), treat as
-  --auto: the interactive prompts are meaningless when the model drives both sides.
+  before committing. Auto mode is on by default (pass --no-auto to require
+  interactive confirmations) — the interactive prompts are meaningless when
+  the model drives both sides.
+disable-model-invocation: true
 allowed-tools: Bash(git status:*) Bash(git diff:*) Bash(git add:*) Bash(git commit:*) Bash(git log:*) Bash(python3:*) Read
 argument-hint: "[--no-auto]"
 ---
