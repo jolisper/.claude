@@ -75,7 +75,7 @@ Choose the push command based on prior steps:
 
 Report exactly one of these outcomes:
 
-- **Success** — show the branch name and remote confirmation from the command output.
+- **Success** — show the branch name and remote confirmation from the command output. If the remote's output includes a "create a pull request" URL (e.g. Bitbucket/GitHub print one on push), omit it — PR creation is handled by the `/git-pr` skill, not here.
 - **Rejected (non-fast-forward)** — explain that the remote has commits the local branch does not. Run Step 3's divergence detection (if not already done) to determine if this is a rebase scenario, and present the appropriate options.
 - **Rejected (force-with-lease)** — someone else pushed to the remote since your last fetch. Suggest running `git fetch` to update, reviewing the new remote commits, then retrying.
 - **Auth / network error** — show the error message and suggest checking SSH keys or credentials.
