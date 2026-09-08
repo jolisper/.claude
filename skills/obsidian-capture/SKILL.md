@@ -138,7 +138,10 @@ Compute:
 - **URI_PATH** = `notes/{FILENAME}` with the `.md` extension stripped.
 - Percent-encode both (spaces → `%20`, `/` → `%2F`) for the URI below.
 
-Confirm (as a markdown link so it renders clickable):
+Confirm using this EXACT markdown link syntax — `[text](url)`, all on one line,
+with the `obsidian://` URI inside the `(...)`. Do not paraphrase this into
+plain prose with the URI appended at the end; that renders as dead text, not
+a clickable link:
 ```
 [Captured → {FILENAME}  (id: {ID})](obsidian://open?vault={VAULT_NAME}&file={URI_PATH})
 ```
