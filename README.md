@@ -18,6 +18,12 @@ Personal Claude Code configuration — skills, agents, and settings.
 | `/git-pr` | Create a Bitbucket pull request from current branch | no |
 | `/git-commit-push` | Stage → commit → push in one workflow | yes |
 
+### Session
+
+| Skill | What it does | Model-invocable |
+|---|---|---|
+| `/unbranch` | Return to the conversation this session was `/branch`ed from | no |
+
 ### Project
 
 | Skill | What it does | Model-invocable |
