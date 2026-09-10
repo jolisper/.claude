@@ -27,8 +27,8 @@ Run this single command:
 
 - **Non-zero exit / `error: ...` on stderr**: Tell the user the parent session couldn't be determined (relay the stderr message), and stop.
 - **`not-a-branch=true`**: Tell the user this conversation wasn't created with `/branch`, so there's no parent to return to.
-- **`parent_session_id=<uuid>`**: Tell the user this session ("`<branch_name>`") was branched from session `<uuid>`, and that they can return to it by running:
-  ```
-  /resume <uuid>
-  ```
-  or, from a new terminal, `claude -r <uuid>`. Do not attempt to run `/resume` yourself — it's a REPL command the user runs, not a tool call.
+- **`parent_session_id=<uuid>`**: Respond with **only** this literal text and nothing else — no prose, no explanation, no code fence, no `branch_name`, just the command on its own line so the user can copy-paste it directly:
+
+  `/resume <uuid>`
+
+  Do not attempt to run `/resume` yourself — it's a REPL command the user runs, not a tool call.
