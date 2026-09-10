@@ -10,8 +10,12 @@ description: >
   Never invoke proactively — this rewrites history and always requires
   explicit user confirmation before touching anything.
 disable-model-invocation: true
+when_to_use: >
+  Trigger when the current branch's commits are in incidental development
+  order (typos, wip, fixups, out-of-order work) and need regrouping into a
+  functional, logically-ordered history before review or merge.
 argument-hint: "target branch (optional)"
-allowed-tools: Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git branch:*) Bash(git fetch:*) Bash(git merge-base:*) Bash(git reset:*) Bash(git add:*) Bash(git commit:*) Bash(git diff:*) Bash(git stash:*) Bash(git show:*) Bash(git checkout:*) Bash(python3:*) Read Edit
+allowed-tools: Bash(git status:*) Bash(git rev-parse:*) Bash(git log:*) Bash(git branch:*) Bash(git fetch:*) Bash(git merge-base:*) Bash(git reset:*) Bash(git add:*) Bash(git diff:*) Bash(git stash:*) Bash(git show:*) Bash(git checkout:*) Bash(python3:*) Read Write Edit
 effort: high
 ---
 
@@ -22,15 +26,20 @@ Reshape the commits on the current branch (since it diverged from its base) into
 ## Dependencies
 
 This skill reuses two scripts owned by sibling skills rather than re-implementing their logic (cluster consistency):
-- `~/.claude/skills/git-commit/scripts/stage-hunks.py` — for intra-file hunk-level staging in Step 4.
+- `~/.claude/skills/git-commit/scripts/stage-hunks.py` — for intra-file hunk-level staging, called internally by `apply-plan.py` in Step 4.
 - `~/.claude/skills/git-rebase/scripts/resolve-conflict.py` — for "keep both" resolution during stash-pop conflicts in Step 6.
 
-If either script is missing, tell the user which one and stop before that step — do not attempt to hand-roll the equivalent logic inline.
+It also owns three scripts of its own:
+- `~/.claude/skills/git-reshape/scripts/detect-base.py` — base-branch detection in Step 1.
+- `~/.claude/skills/git-reshape/scripts/apply-plan.py` — executes the confirmed reshape plan in Step 4.
+- `~/.claude/skills/git-reshape/scripts/run-checks.py` — optional build/test check in Step 6.
+
+If any of these scripts is missing, tell the user which one and stop before that step — do not attempt to hand-roll the equivalent logic inline.
 
 ## When NOT to use this skill / when to abort
 
 - The commit range ahead of base contains merge commits — reshape only supports a linear range. Stop and ask the user to resolve/flatten separately first.
-- There are no commits ahead of the detected base — report "No commits to reshape" and stop.
+- There are zero commits ahead of the detected base — report "No commits to reshape" and stop. A range of exactly **one** commit is not grounds to stop: that commit may still bundle unrelated concerns worth splitting into several. Don't assume "only 1 commit ahead" means there's nothing to reshape — proceed to Step 3 and cluster it like any other range.
 - The user has not explicitly confirmed the proposed plan (Step 3) — never proceed to Step 4 without an explicit "(a) Apply this plan".
 
 ## Step 1 — Pre-flight check
@@ -41,7 +50,7 @@ Run each of these commands separately:
 
 1. `git status`
 2. `git rev-parse --abbrev-ref HEAD` — note the current branch name.
-3. **Detect the base branch** (skip if `$ARGUMENTS` provided): check the branch's reflog first — `git log -g --format="%gs" <current-branch>` and look for a `branch: Created from <source>` entry; use the most recent match. If reflog yields nothing, fall back to common branch names via `git branch -a`, preferring `main`, then `master`, then `develop`, then `dev`. If still ambiguous, ask the user which branch is the base.
+3. **Detect the base branch** (skip if `$ARGUMENTS` provided): run `python3 ~/.claude/skills/git-reshape/scripts/detect-base.py --branch <current-branch>`. On `status=found`, use the reported `base`. On `status=ambiguous`, ask the user which branch is the base.
 4. **Shared-branch guard**: `git branch -r --list origin/<current-branch>`. If the remote branch exists, warn:
    ```
    ⚠ Warning: `<current-branch>` exists on the remote. Reshaping rewrites history,
@@ -53,7 +62,7 @@ Run each of these commands separately:
    ```
    Show this warning even if the user already explicitly asked for a reshape — they may not have considered that others track this branch. On (b): stop.
 5. `git fetch origin`, then `git merge-base HEAD origin/<base>` — note the result as `<merge-base>`.
-6. `git log <merge-base>..HEAD --oneline` — if empty, report "No commits to reshape" and stop.
+6. `git log <merge-base>..HEAD --oneline` — if empty, report "No commits to reshape" and stop. If it shows exactly one commit, do **not** stop — a single commit can still bundle unrelated concerns; proceed to Step 3 and let clustering decide whether it splits into multiple commits.
 7. `git log <merge-base>..HEAD --merges --oneline` — if this returns any commits, stop and tell the user reshape only supports a linear commit range; ask them to resolve/flatten merges first.
 
 ## Step 2 — Handle dirty working tree
@@ -96,13 +105,10 @@ If `git status` (from Step 1) shows uncommitted changes:
 Only after the user picks "(a) Apply this plan" (or an edited version of it):
 
 1. `git reset --soft <merge-base>` — collapses the whole range into staged changes. This is deliberately not an interactive rebase: because commits are not being replayed, there are no rebase conflicts to resolve here, no matter how much reordering or splitting the plan calls for.
-2. For each new group, in the planned order:
-   - `git reset` — unstage everything (from the soft reset or a prior loop iteration; the changes remain in the working tree).
-   - Stage only what belongs to this group: `git add <files>` for whole-file groups. For intra-file hunk-level splits, run `python3 ~/.claude/skills/git-commit/scripts/stage-hunks.py --help` once to confirm the interface, then invoke it with `--file <path> --hunks <N,N,...>` (hunk numbers are 1-based, matching the order they appear in `git diff <file>`).
-   - `git commit -m "<message>"` with that group's planned Conventional Commits message.
-3. Repeat until every planned group is committed and the working tree is clean.
+2. Write the confirmed plan to a JSON file: a list of groups, each with `message` (the Conventional Commits message) and either `files` (whole-file groups) or `hunks` (a list of `{"file": <path>, "hunks": [N,...]}` for intra-file splits, 1-based hunk numbers matching the order they appear in `git diff <file>`), in the planned order.
+3. Run `python3 ~/.claude/skills/git-reshape/scripts/apply-plan.py --plan <path-to-json>`. This loops reset/add-or-stage-hunks/commit per group internally, so the working tree ends up clean with every planned group committed in order.
 
-If any step in this loop fails (e.g. `stage-hunks.py` reports an error), stop immediately, report the error and which group failed, and tell the user the backup branch is intact — do not attempt to auto-recover mid-loop.
+If the script exits non-zero, stop immediately, report its stderr error and which group failed (it prints `status=done group=N` for each committed group, so N+1 is where it stopped), and tell the user the backup branch is intact — do not attempt to auto-recover mid-loop.
 
 ## Step 5 — Verification
 
@@ -134,4 +140,4 @@ If any step in this loop fails (e.g. `stage-hunks.py` reports an error), stop im
    (a) Yes — run build/tests
    (b) No — skip
    ```
-   On (a): detect the project's build/test command (`package.json` scripts, `Makefile`, `Cargo.toml`, `pyproject.toml`, etc.), run it, and report pass/fail. On (b): note that a clean reshape only guarantees the net diff is unchanged, not that the new commit boundaries build/test cleanly in isolation.
+   On (a): run `python3 ~/.claude/skills/git-reshape/scripts/run-checks.py` and report `status=pass`/`status=fail`/`status=none` along with the command's output. On (b): note that a clean reshape only guarantees the net diff is unchanged, not that the new commit boundaries build/test cleanly in isolation.
