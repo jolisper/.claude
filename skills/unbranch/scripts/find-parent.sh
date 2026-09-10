@@ -11,6 +11,7 @@ set -euo pipefail
 #   not-a-branch=true                          — this session was not created via /branch
 #   parent_session_id=<uuid>                   — the session this one was branched from
 #   branch_name=<name>                         — the name /branch gave this session
+#   copied=true|false                          — whether "/resume <uuid>" was copied to the clipboard (pbcopy)
 #
 # On failure, writes "error: <what was expected> — <what to try>" to stderr and exits 1.
 if [ "${1:-}" = "--help" ]; then
@@ -46,5 +47,12 @@ PARENT_ID=$(echo "$MATCH" | grep -o '[0-9a-f-]\{36\}')
 NAME=$( (grep -o 'Branched conversation \\"[^"]*\\"' "$FILE" || true) | tail -1 | sed -e 's/^Branched conversation \\"//' -e 's/\\"$//')
 NAME="${NAME:-unnamed}"
 
+COPIED=false
+if command -v pbcopy >/dev/null 2>&1; then
+  printf '/resume %s' "$PARENT_ID" | pbcopy
+  COPIED=true
+fi
+
 echo "parent_session_id=$PARENT_ID"
 echo "branch_name=$NAME"
+echo "copied=$COPIED"

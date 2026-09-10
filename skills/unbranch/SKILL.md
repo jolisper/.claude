@@ -21,13 +21,17 @@ Run this single command:
    - exits non-zero with `error: ...` on stderr — could not locate this session's transcript
    - or prints to stdout one of:
      - `not-a-branch=true` — this session was not created via `/branch`
-     - `parent_session_id=<uuid>` and `branch_name=<name>` — this session is a branch; `<uuid>` is the original session to return to
+     - `parent_session_id=<uuid>`, `branch_name=<name>`, and `copied=true|false` — this session is a branch; `<uuid>` is the original session to return to; `copied=true` means `/resume <uuid>` was already placed on the clipboard via `pbcopy`
 
 ## Step 2 — Report
 
 - **Non-zero exit / `error: ...` on stderr**: Tell the user the parent session couldn't be determined (relay the stderr message), and stop.
 - **`not-a-branch=true`**: Tell the user this conversation wasn't created with `/branch`, so there's no parent to return to.
-- **`parent_session_id=<uuid>`**: Respond with **only** this literal text and nothing else — no prose, no explanation, no code fence, no `branch_name`, just the command on its own line so the user can copy-paste it directly:
+- **`parent_session_id=<uuid>` with `copied=true`**: Respond with **only** this literal text and nothing else — no other prose, no explanation, no code fence, no `branch_name`:
+
+  `Copied to clipboard: /resume <uuid>`
+
+- **`parent_session_id=<uuid>` with `copied=false`** (no `pbcopy` available): Respond with **only** this literal text and nothing else — no prose, no explanation, no code fence, no `branch_name`, just the command on its own line so the user can copy-paste it directly:
 
   `/resume <uuid>`
 
