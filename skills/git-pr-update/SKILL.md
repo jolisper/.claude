@@ -2,12 +2,13 @@
 name: git-pr-update
 description: >
   Use this skill to update the title and/or description of an existing open Bitbucket
-  pull request for the current branch. Invoke when the user says "update the PR",
+  or GitHub pull request for the current branch. Invoke when the user says "update the PR",
   "refresh the PR description", "fix the PR title", "sync the PR", or similar.
-  Requires BITBUCKET_TOKEN and BITBUCKET_USERNAME in the environment.
-version: 1.0.0
+  Bitbucket requires BITBUCKET_TOKEN and BITBUCKET_USERNAME in the environment; GitHub
+  requires the `gh` CLI to be installed and authenticated (`gh auth status`).
+version: 1.1.0
 argument-hint: "[--auto]"
-when_to_use: When the user wants to update an existing Bitbucket PR's title or description after new commits have been pushed to the branch, or to refresh stale PR content without opening the Bitbucket UI.
+when_to_use: When the user wants to update an existing Bitbucket or GitHub PR's title or description after new commits have been pushed to the branch, or to refresh stale PR content without opening the web UI.
 disable-model-invocation: true
 allowed-tools: Agent Bash(bash:*) Bash(git rev-parse:*) Bash(git remote:*) Write
 ---
@@ -19,12 +20,11 @@ Check whether `--auto` was passed in the invocation arguments. If yes, set AUTO=
 ## Abort early if
 
 - The current branch is `main`, `master`, `develop`, or `trunk` — these are shared branches.
-- The `origin` remote URL is not a `bitbucket.org` URL — this skill only targets Bitbucket.
-- `BITBUCKET_TOKEN` or `BITBUCKET_USERNAME` are not set in the environment.
+- The `origin` remote URL is neither a `bitbucket.org` nor a `github.com` URL — this skill only targets those two hosts.
 
 If any condition applies, stop immediately and explain the reason.
 
-## Step 1 — Detect workspace, repo, and branch
+## Step 1 — Detect host, workspace, repo, and branch
 
 Run each separately:
 
@@ -36,13 +36,23 @@ git rev-parse --abbrev-ref HEAD
 ```
 git remote get-url origin
 ```
-→ parse WORKSPACE and REPO:
-- SSH: `git@bitbucket.org:<workspace>/<repo>.git`
-- HTTPS: `https://bitbucket.org/<workspace>/<repo>.git`
+→ determine HOST and parse WORKSPACE/OWNER and REPO:
+- Bitbucket SSH: `git@bitbucket.org:<workspace>/<repo>.git`
+- Bitbucket HTTPS: `https://bitbucket.org/<workspace>/<repo>.git`
+- GitHub SSH: `git@github.com:<owner>/<repo>.git`
+- GitHub HTTPS: `https://github.com/<owner>/<repo>.git`
 
-Stop if `bitbucket.org` is not present or the URL matches neither pattern.
+Set HOST to `bitbucket` or `github` based on which domain matched. Strip a trailing `.git` from repo if present.
+
+Stop if neither `bitbucket.org` nor `github.com` is present, or the URL matches neither pattern for its host.
+
+**If HOST is `bitbucket`:** stop if `BITBUCKET_TOKEN` or `BITBUCKET_USERNAME` are not set in the environment — name the missing one.
+
+**If HOST is `github`:** stop if the `gh` CLI is not installed, or `gh auth status` fails — tell the user to install/authenticate `gh`.
 
 ## Step 2 — Find the open PR
+
+**If `HOST` is `bitbucket`:**
 
 Run:
 
@@ -58,6 +68,22 @@ Parse the `values` array from the JSON response:
 - **0 results** → stop: `No open PR found for branch '<SOURCE_BRANCH>'.`
 - **1 result** → extract PR_ID, PR_TITLE, PR_DESCRIPTION, PR_URL. Proceed.
 - **2+ results** → if AUTO=false: show the list (id, title, creation date) and wait for the user to pick one. If AUTO=true: stop with `Multiple open PRs found for branch '<SOURCE_BRANCH>' — run without --auto to pick one.`
+
+**If `HOST` is `github`:**
+
+Run:
+
+```bash
+gh pr list --repo "<WORKSPACE>/<REPO>" --head "<SOURCE_BRANCH>" --state open --json number,title,body,url
+```
+
+If the command exits non-zero, report the error output and stop.
+
+Parse the JSON array from the output:
+
+- **0 results** → stop: `No open PR found for branch '<SOURCE_BRANCH>'.`
+- **1 result** → extract PR_ID (`number`), PR_TITLE (`title`), PR_DESCRIPTION (`body`), PR_URL (`url`). Proceed.
+- **2+ results** → if AUTO=false: show the list (number, title) and wait for the user to pick one. If AUTO=true: stop with `Multiple open PRs found for branch '<SOURCE_BRANCH>' — run without --auto to pick one.`
 
 ## Step 3 — Choose update mode
 
@@ -138,8 +164,9 @@ PR update preview:
 
 Use the `Write` tool to write NEW_DESCRIPTION to `/tmp/_pr_update_description.txt`.
 
-Run `--help` on the script first to confirm flags, then invoke:
+Run `--help` on the applicable script first to confirm flags, then invoke it. If the script exits non-zero, show the error output and stop.
 
+**If `HOST` is `bitbucket`:**
 ```bash
 bash ~/.claude/skills/git-pr-update/scripts/update-pr.sh \
   --workspace "<WORKSPACE>" \
@@ -149,13 +176,26 @@ bash ~/.claude/skills/git-pr-update/scripts/update-pr.sh \
   --description-file /tmp/_pr_update_description.txt
 ```
 
-If the script exits non-zero, show the error output and stop.
+**If `HOST` is `github`:**
+```bash
+bash ~/.claude/skills/git-pr-update/scripts/update-pr-github.sh \
+  --repo "<WORKSPACE>/<REPO>" \
+  --pr-id "<PR_ID>" \
+  --title "<NEW_TITLE>" \
+  --description-file /tmp/_pr_update_description.txt
+```
 
 ## Step 7 — Report result
 
-The script outputs the JSON response body followed by `status=<value>` on the last line.
+**If `HOST` is `bitbucket`:** the script outputs the JSON response body followed by `status=<value>` on the last line.
 
 - `status=updated` → show: `PR updated: <PR_URL>`
 - `status=unauthorized` → Token is invalid or expired. Tell the user to regenerate it.
 - `status=forbidden` → Token lacks `write:pullrequest:bitbucket` scope.
 - `status=error` → Show the `"message"` field from the JSON response prefixed with `Error:`.
+
+**If `HOST` is `github`:** the script outputs the PR URL followed by `status=<value>` on the last line.
+
+- `status=updated` → show: `PR updated: <URL>`
+- `status=unauthorized` → the `gh` CLI is not authenticated. Tell the user to run `gh auth login`.
+- `status=error` → show the captured error output prefixed with `Error:`.

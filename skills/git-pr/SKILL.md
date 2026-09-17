@@ -1,12 +1,13 @@
 ---
 name: git-pr
 description: >
-  Use this skill to create a Bitbucket pull request from the current branch.
+  Use this skill to create a Bitbucket or GitHub pull request from the current branch.
   Invoke when the user says "create a PR", "open a pull request", "submit a PR",
-  "raise a pull request", or similar. Requires BITBUCKET_TOKEN in the environment.
-  Handles base-branch detection, title/description drafting, preview, and API submission.
-  Requires BITBUCKET_TOKEN and BITBUCKET_USERNAME in the environment.
-version: 1.0.0
+  "raise a pull request", or similar. Bitbucket requires BITBUCKET_TOKEN and
+  BITBUCKET_USERNAME in the environment; GitHub requires the `gh` CLI to be installed
+  and authenticated (`gh auth status`).
+  Handles base-branch detection, title/description drafting, preview, and submission.
+version: 1.1.0
 disable-model-invocation: true
 allowed-tools: Agent Bash(bash:*) Write
 ---
@@ -16,7 +17,7 @@ allowed-tools: Agent Bash(bash:*) Write
 ## Abort early if
 
 - The current branch is `main`, `master`, `develop`, or `trunk` — these are shared branches.
-- The `origin` remote URL is not a `bitbucket.org` URL — this skill only targets Bitbucket.
+- The `origin` remote URL is neither a `bitbucket.org` nor a `github.com` URL — this skill only targets those two hosts.
 - There are no commits between the source branch and its detected base — nothing to PR.
 
 If any of these conditions apply, stop immediately and explain the reason to the user.
@@ -24,6 +25,7 @@ If any of these conditions apply, stop immediately and explain the reason to the
 ## Available scripts
 
 - `~/.claude/skills/git-pr/scripts/create-pr.sh` — writes JSON payload and POSTs to the Bitbucket API. Run `--help` to confirm the interface.
+- `~/.claude/skills/git-pr/scripts/create-pr-github.sh` — wraps `gh pr create`. Run `--help` to confirm the interface.
 
 ## Step 1 — Gather and draft (forked context)
 
@@ -38,11 +40,14 @@ Run each command separately. Never chain with `&&`, `||`, or `;`.
 
 1. `git rev-parse --abbrev-ref HEAD` → source branch.
    - Stop if the branch is `main`, `master`, `develop`, or `trunk`: output `ERROR: source branch is a shared branch (<name>).`
-2. `git remote get-url origin` → parse workspace and repo-slug:
-   - SSH: `git@bitbucket.org:<workspace>/<repo-slug>.git`
-   - HTTPS: `https://bitbucket.org/<workspace>/<repo-slug>.git`
-   - Stop if `bitbucket.org` is not present: output `ERROR: remote is not a Bitbucket URL (<url>).`
-   - Stop if the URL matches neither pattern: output `ERROR: cannot parse workspace/repo from remote URL (<url>).`
+2. `git remote get-url origin` → determine the host and parse workspace/owner and repo-slug:
+   - Bitbucket SSH: `git@bitbucket.org:<workspace>/<repo-slug>.git`
+   - Bitbucket HTTPS: `https://bitbucket.org/<workspace>/<repo-slug>.git`
+   - GitHub SSH: `git@github.com:<owner>/<repo-slug>.git`
+   - GitHub HTTPS: `https://github.com/<owner>/<repo-slug>.git`
+   - Set HOST to `bitbucket` or `github` based on which domain matched. Strip a trailing `.git` from repo-slug if present.
+   - Stop if neither `bitbucket.org` nor `github.com` is present: output `ERROR: remote is not a Bitbucket or GitHub URL (<url>).`
+   - Stop if the URL matches neither pattern for its host: output `ERROR: cannot parse workspace/repo from remote URL (<url>).`
 
 **B — Detect base branch**
 
@@ -110,10 +115,11 @@ If a commit subject is unclear, run `git show <hash>` to inspect the diff before
 Return exactly this format (omit the `WARNING` line entirely if no warning was set in step C):
 
 ```
+HOST: <bitbucket|github>
 SOURCE: <source-branch>
 BASE: <base-branch>
 WARNING: <warning text from step C, if any>
-WORKSPACE: <workspace>
+WORKSPACE: <workspace-or-owner>
 REPO: <repo-slug>
 TITLE: <title>
 DESCRIPTION:
@@ -123,7 +129,7 @@ DESCRIPTION:
 
 If the subagent output starts with `ERROR:`, stop and show the error to the user.
 
-Otherwise parse `SOURCE`, `BASE`, `WARNING` (if present), `WORKSPACE`, `REPO`, `TITLE`, and `DESCRIPTION` from the output.
+Otherwise parse `HOST`, `SOURCE`, `BASE`, `WARNING` (if present), `WORKSPACE`, `REPO`, `TITLE`, and `DESCRIPTION` from the output.
 
 If `WARNING` is present, print it before the preview:
 ```
@@ -159,7 +165,9 @@ PR preview:
 
 Use the `Write` tool to write the description to `/tmp/_pr_description.txt` with the exact description content (no extra escaping needed).
 
-Run `--help` on the script first to confirm flags, then invoke. If the script exits non-zero, show the error output to the user and stop — do not proceed to Step 4.
+Run `--help` on the applicable script first to confirm flags, then invoke it. If the script exits non-zero, show the error output to the user and stop — do not proceed to Step 4.
+
+**If `HOST` is `bitbucket`:**
 ```bash
 bash ~/.claude/skills/git-pr/scripts/create-pr.sh \
   --workspace "<WORKSPACE>" \
@@ -170,11 +178,27 @@ bash ~/.claude/skills/git-pr/scripts/create-pr.sh \
   --description-file /tmp/_pr_description.txt
 ```
 
+**If `HOST` is `github`:**
+```bash
+bash ~/.claude/skills/git-pr/scripts/create-pr-github.sh \
+  --repo "<WORKSPACE>/<REPO>" \
+  --source "<SOURCE>" \
+  --destination "<BASE>" \
+  --title "<TITLE>" \
+  --description-file /tmp/_pr_description.txt
+```
+
 ## Step 4 — Report result
 
-The script outputs the JSON response body followed by `status=<value>` on the last line.
+**If `HOST` is `bitbucket`:** the script outputs the JSON response body followed by `status=<value>` on the last line.
 
 - `status=created` → show: `PR created: https://bitbucket.org/<WORKSPACE>/<REPO>/pull-requests/<id>`
 - `status=unauthorized` → Token is invalid or expired. Tell the user to regenerate it.
 - `status=forbidden` → Token lacks `write:pullrequest:bitbucket` scope.
 - `status=error` → Show the `"message"` field from the JSON response prefixed with `Error:`.
+
+**If `HOST` is `github`:** the script outputs the PR URL followed by `status=<value>` on the last line.
+
+- `status=created` → show: `PR created: <URL>`
+- `status=unauthorized` → the `gh` CLI is not authenticated. Tell the user to run `gh auth login`.
+- `status=error` → show the captured error output prefixed with `Error:`.
