@@ -34,4 +34,5 @@ statusline/statusline.local.conf
 
 # Re-ignore personal/generated files within allowed dirs
 agents/*.bak
+skills/synced/
 
