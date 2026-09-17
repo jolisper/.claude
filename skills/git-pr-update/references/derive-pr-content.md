@@ -14,11 +14,14 @@ Run each command separately. Never chain with `&&`, `||`, or `;`.
 
 1. `git rev-parse --abbrev-ref HEAD` → source branch.
    - Stop if the branch is `main`, `master`, `develop`, or `trunk`: output `ERROR: source branch is a shared branch (<name>).`
-2. `git remote get-url origin` → parse workspace and repo-slug:
-   - SSH: `git@bitbucket.org:<workspace>/<repo-slug>.git`
-   - HTTPS: `https://bitbucket.org/<workspace>/<repo-slug>.git`
-   - Stop if `bitbucket.org` is not present: output `ERROR: remote is not a Bitbucket URL (<url>).`
-   - Stop if the URL matches neither pattern: output `ERROR: cannot parse workspace/repo from remote URL (<url>).`
+2. `git remote get-url origin` → determine the host and parse workspace/owner and repo-slug:
+   - Bitbucket SSH: `git@bitbucket.org:<workspace>/<repo-slug>.git`
+   - Bitbucket HTTPS: `https://bitbucket.org/<workspace>/<repo-slug>.git`
+   - GitHub SSH: `git@github.com:<owner>/<repo-slug>.git`
+   - GitHub HTTPS: `https://github.com/<owner>/<repo-slug>.git`
+   - Set HOST to `bitbucket` or `github` based on which domain matched. Strip a trailing `.git` from repo-slug if present.
+   - Stop if neither `bitbucket.org` nor `github.com` is present: output `ERROR: remote is not a Bitbucket or GitHub URL (<url>).`
+   - Stop if the URL matches neither pattern for its host: output `ERROR: cannot parse workspace/repo from remote URL (<url>).`
 
 **B — Detect base branch**
 
@@ -70,9 +73,10 @@ If a commit subject is unclear, run `git show <hash>` to inspect the diff before
 Return exactly this format:
 
 ```
+HOST: <bitbucket|github>
 SOURCE: <source-branch>
 BASE: <base-branch>
-WORKSPACE: <workspace>
+WORKSPACE: <workspace-or-owner>
 REPO: <repo-slug>
 TITLE: <title>
 DESCRIPTION:
