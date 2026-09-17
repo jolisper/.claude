@@ -61,7 +61,13 @@ If nothing is staged (`git diff --cached --stat` shows no output):
       • <file1> (partial — lines X–Y only) — <what this hunk does>
 
       Reason: <why these changes belong together>
+   ```
+   If there is only one group, still use the same format (single commit block with its files and reason) — this makes it clear the agent considered splitting and decided everything belongs together.
 
+   **In auto mode, do not render the lettered menu at all** — there is no one to choose it, and printing it invites waiting for a reply that will never come. After the group blocks, replace the menu with a single line stating the decision, e.g. `Proceeding: staging and committing as a single commit.` or `Proceeding: starting with commit 1.` Then continue immediately to the next step — do not pause for input.
+
+   Only when **not** in auto mode, show the lettered menu and wait for the user's choice:
+   ```
    (a) Start with commit 1
    (b) Start with commit 2
    ...
@@ -70,10 +76,6 @@ If nothing is staged (`git diff --cached --stat` shows no output):
    (<next>) Abort
    ```
    Letters are always sequential: one per group, then the fixed options continue from the next letter. For example, with 2 groups: (a) commit 1, (b) commit 2, (c) stage all, (d) manual, (e) abort. With 1 group: (a) stage and commit, (b) manual, (c) abort.
-
-   If there is only one group, still use the same format (single commit block with its files and reason) — this makes it clear the agent considered splitting and decided everything belongs together.
-
-   In auto mode, display the analysis as usual, then proceed automatically with the suggested grouping without waiting for a menu choice. Still show which group was selected.
 
    **Inseparable mixed concerns**: when the analysis identifies multiple distinct reasons for change (e.g. a format change and a refactor) but the changes affect the same lines of code and cannot be split into separate commits, explain this directly in the `Reason:` line:
    ```
@@ -125,12 +127,14 @@ fix(esco3): align match log format with structured pattern
 - refactor: merge split anyMatch assertions into single combined condition
 ```
 
-Show the proposed message clearly, then ask the user to:
+Show the proposed message clearly.
+
+**In auto mode, do not render a confirmation menu at all** — there is no one to choose it. State that you're proceeding with the message as proposed, then continue immediately to Step 6 — do not pause for input.
+
+Only when **not** in auto mode, ask the user to:
 - (a) confirm and use it as-is
 - (b) edit it (ask for their edits)
 - (c) provide their own message entirely
-
-In auto mode, display the proposed message and proceed to Step 6 immediately without asking for confirmation.
 
 ## Step 6 — Commit
 
