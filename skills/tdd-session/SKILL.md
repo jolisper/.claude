@@ -128,7 +128,7 @@ Print cycle summary:
 Cycle: <N>
 ```
 
-Assess whether the goal is fully implemented. Even if the goal seems simple, if you reach 5+ cycles without completion, ask the user — single-cycle assumptions often hide complexity. If unclear after 5+ cycles, ask the user via AskUserQuestion.
+Assess whether the goal is fully implemented. A cycle where Green made no implementation change (trivially passing) doesn't count toward this threshold — only cycles with a real code change do. Even if the goal seems simple, if you reach 5+ such cycles without completion, ask the user — single-cycle assumptions often hide complexity. If unclear after 5+ cycles, ask the user via AskUserQuestion.
 
 ---
 
