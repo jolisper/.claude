@@ -7,7 +7,7 @@ description: >
   Goals, Non-goals, and Scope.
 disable-model-invocation: true
 argument-hint: "<description>"
-allowed-tools: Read Write Bash(git rev-parse:*)
+allowed-tools: Read Write Bash(git rev-parse:*) Bash(git fetch:*) Bash(git checkout:*)
 when_to_use: >
   Invoke when the user wants to start a new initiative, capture the "why" behind upcoming
   work, or create the upstream document that feeds into spec-functional. Run this skill
@@ -53,7 +53,27 @@ Use this name, or enter a different one (kebab-case):
 
 Use whatever the user confirms as `<name>`.
 
-**Step 4 — Gather remaining context**
+**Step 4 — Create the initiative branch**
+
+Run `git fetch origin` to update the remote-tracking ref, then create and switch to a new
+branch named `<name>` from `origin/main`:
+
+```
+git fetch origin
+git checkout -b <name> origin/main
+```
+
+If `git checkout -b <name> origin/main` fails because the branch already exists, ask:
+
+```
+Branch <name> already exists. How do you want to proceed?
+(a) Check it out as-is
+(b) Cancel
+```
+
+On (b): stop.
+
+**Step 5 — Gather remaining context**
 
 Identify what's still needed to draft a complete `initiative.md`. Ask only for what cannot
 be inferred from the description — in a single plain text message covering all gaps:
@@ -66,7 +86,7 @@ If the description is detailed enough to draft all sections without ambiguity, s
 
 Never ask more than one round.
 
-**Step 5 — Check for an existing initiative**
+**Step 6 — Check for an existing initiative**
 
 Run `bash -c "test -f <project-root>/initiatives/<name>/initiative.md && echo exists || echo not-found"` to check whether the file exists. If the output is `exists`, ask:
 
@@ -78,7 +98,7 @@ initiatives/<name>/initiative.md already exists. How do you want to proceed?
 
 On (b): stop.
 
-**Step 6 — Draft and write**
+**Step 7 — Draft and write**
 
 Draft the document in one pass — do not ask questions during this step.
 
