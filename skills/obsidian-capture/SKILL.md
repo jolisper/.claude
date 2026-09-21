@@ -146,6 +146,14 @@ a clickable link:
 [Captured → {FILENAME}  (id: {ID})](obsidian://open?vault={VAULT_NAME}&file={URI_PATH})
 ```
 
+WRONG (plain text with the URI trailing in parentheses — not clickable):
+```
+Captured → {FILENAME} (id: {ID}) (obsidian://open?vault={VAULT_NAME}&file={URI_PATH})
+```
+The square brackets `[...]` around the text and the immediately-following
+`(...)` around the URI are both mandatory. The output must contain a literal
+`[` right before "Captured" and a literal `]` right before the `(`.
+
 ## Failure contract
 
 - **Vault not configured:** show the setup message from Step 1 and stop.
