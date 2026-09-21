@@ -60,10 +60,14 @@ branch named `<name>` from `origin/main`:
 
 ```
 git fetch origin
-git checkout -b <name> origin/main
+git checkout -b <name> --no-track origin/main
 ```
 
-If `git checkout -b <name> origin/main` fails because the branch already exists, ask:
+`--no-track` is required: without it, `checkout -b <name> origin/main` sets the new
+branch's upstream to `origin/main`, so a later plain `git push` would push straight onto
+the remote's `main` instead of creating `<name>` on the remote.
+
+If `git checkout -b <name> --no-track origin/main` fails because the branch already exists, ask:
 
 ```
 Branch <name> already exists. How do you want to proceed?
