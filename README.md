@@ -28,7 +28,7 @@ Personal Claude Code configuration — skills, agents, and settings.
 
 | Skill | What it does | Model-invocable |
 |---|---|---|
-| `/run-tests` | Detect project type and run tests | yes |
+| `/test-run-all` | Detect project type and run tests | yes |
 | `/refactor` | Refactor following Object Calisthenics rules | no |
 | `/sdk` | Switch SDKMAN-managed SDK version (Java, Node, …) | yes |
 | `/try` | Investigate a solution in an isolated worktree | no |

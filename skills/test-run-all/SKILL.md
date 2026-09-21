@@ -1,5 +1,5 @@
 ---
-name: run-tests
+name: test-run-all
 description: >
   Use when the user asks to run, execute, or check tests. Detects the project
   type, cleans build artifacts, and runs the test suite.
@@ -55,7 +55,7 @@ Run the appropriate clean command for the detected stack. Show the exact command
 | Go | `go clean -testcache` |
 | Maven | `mvn clean` |
 | Gradle | `./gradlew clean` (fall back to `gradle clean` if `gradlew` is not present) |
-| Python | `bash ~/.claude/skills/run-tests/scripts/python-clean.sh` |
+| Python | `bash ~/.claude/skills/test-run-all/scripts/python-clean.sh` |
 | Elixir | `mix clean` |
 | Ruby | *(no standard clean — skip silently)* |
 | .NET | `dotnet clean` |
