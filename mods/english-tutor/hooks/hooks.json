@@ -1,0 +1,4 @@
+{
+  "description": "The english-tutor hooks module",
+  "modules": ["./register.js"]
+}

@@ -6,9 +6,11 @@ description: >
   "start a new feature branch", or "branch off main". Updates the main
   development branch first, then creates and checks out the new branch.
   Accepts an optional branch name following the Conventional Branch spec
-  (e.g. feat/add-login, fix/issue-42-header).
+  (e.g. feat/add-login, fix/issue-42-header). Auto mode is on by default:
+  with no branch name given, it infers a representative type/description
+  from context instead of prompting (pass --no-auto for the interactive menus).
 disable-model-invocation: true
-argument-hint: "feat/branch-description"
+argument-hint: "[feat/branch-description | --no-auto]"
 allowed-tools: Bash(git:*)
 ---
 
@@ -18,11 +20,33 @@ Update main/master and create a new branch from it. Branch names follow the Conv
 
 ## Phase 1 — Resolve branch name
 
-**If `$ARGUMENTS` is non-empty**, use it as the full branch name and jump to **→ Validate**.
+**If `$ARGUMENTS` is a full branch name** (contains `/`), use it as given and jump to **→ Validate**.
 
-**If `$ARGUMENTS` is empty**, run the interactive flow below.
+**If `$ARGUMENTS` is exactly `--no-auto`**, run the interactive flow below (Steps 1–2).
 
-### Step 1 — Type
+**Otherwise** (`$ARGUMENTS` is empty), run **Auto mode** below — this is the default.
+
+### Auto mode — infer type and description from context
+
+Auto mode picks a representative branch name without asking the user anything. Do not show the type menu or the description prompt below in this mode.
+
+1. **Determine intent**, in priority order:
+   - The current conversation — the feature, fix, or task just discussed or requested.
+   - If that's inconclusive, uncommitted work: run `git status --short` and `git diff` to see what's being changed.
+   - If neither gives a clear signal, this is a genuine ambiguity — fall back to the interactive flow below (Steps 1–2) instead of guessing.
+
+2. **Pick a type** from the same set used by the interactive menu: `feat`, `fix`, `hotfix`, `release`, `chore`.
+
+3. **Build a description** using the same rules the interactive flow uses — read `~/.claude/skills/git-new-branch/references/conventional-branch-spec.md` and apply its translation patterns: lowercase kebab-case, 3–5 words, concise and purpose-driven, no leading/trailing/consecutive hyphens.
+
+4. **State the decision in one line**, then continue immediately to **→ Validate** — do not pause for input:
+   ```
+   Auto: creating branch '<type>/<description>' — <one-clause reason>.
+   ```
+
+### Interactive flow (`--no-auto` only)
+
+#### Step 1 — Type
 
 Show this menu and wait for the user's choice (accept number or keyword):
 
@@ -37,7 +61,7 @@ Select branch type:
 (Aliases feature/ and bugfix/ are also accepted as arguments.)
 ```
 
-### Step 2 — Description
+#### Step 2 — Description
 
 Ask: `Description (lowercase, hyphens only — e.g. add-login, issue-42-header):`
 

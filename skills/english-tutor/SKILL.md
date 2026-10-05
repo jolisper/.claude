@@ -23,6 +23,11 @@ Parse stdout for `status=<value>`:
 - `status=enabled`  → "English tutor is now **on**."
 - `status=disabled` → "English tutor is now **off**."
 
+This toggles a plugin's enabled state in `~/.claude/settings.json`, which an
+already-running session doesn't pick up by itself. Append to the status
+message: "Run `/reload-plugins` to apply this in the current session — it
+takes effect automatically in any new session you start."
+
 ### Toggle strict mode
 
 ```

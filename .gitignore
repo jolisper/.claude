@@ -32,7 +32,11 @@ statusline/statusline.local.conf
 !initiatives/
 !initiatives/**
 
+!mods/
+!mods/**
+
 # Re-ignore personal/generated files within allowed dirs
 agents/*.bak
 skills/synced/
+mods/*/tsconfig.json
 

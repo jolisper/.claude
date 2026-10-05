@@ -114,6 +114,12 @@ def main():
         clear_pending(session_id)
         sys.exit(0)
 
+    # Bypass: synthetic hand-back from a background agent/skill, not user-typed text
+    if prompt.startswith("<agent-message"):
+        _log("SKIP: agent hand-back")
+        clear_pending(session_id)
+        sys.exit(0)
+
     strict = _load_config().get("strict", False)
     pending = get_pending(session_id) if strict else None
 
