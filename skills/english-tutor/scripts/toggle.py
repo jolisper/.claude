@@ -33,7 +33,7 @@ def toggle_hook():
         sys.exit(1)
 
     enabled_plugins = data.get("enabledPlugins", {})
-    currently_enabled = enabled_plugins.get(PLUGIN_ID, True)
+    currently_enabled = enabled_plugins.get(PLUGIN_ID, False)
     action = "disable" if currently_enabled else "enable"
 
     result = subprocess.run(
