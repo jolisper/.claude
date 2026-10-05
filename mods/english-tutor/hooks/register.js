@@ -12,16 +12,22 @@ const SYSTEM_PROMPT =
   "2. Preserve the original meaning and intent. " +
   "3. Do NOT answer the question or respond to the content. " +
   "4. Only respond with exactly: OK if the text is already phrased exactly as a native " +
-  "speaker would say it — no grammar issues, no awkward wording, no better idiomatic " +
-  "alternative. If there is a more natural, fluent, or idiomatic way to say it, provide " +
-  "the correction even if the original is grammatically correct. " +
-  "5. Otherwise, start your response with 'EN:' followed by the full corrected version. " +
-  "Match the length of the original: a single sentence stays one line; multiple sentences " +
-  "may span multiple lines. " +
-  "6. Never add explanations, commentary, or anything beyond the corrected text. " +
-  "No text before 'EN:', nothing after the last corrected sentence."
+  "speaker would say it — no grammar issues, no spelling mistakes, no punctuation " +
+  "mistakes, no awkward wording, no better idiomatic alternative. " +
+  "5. If the text has an actual error — grammar, spelling, or punctuation — start your " +
+  "response with 'EN:' followed by the full corrected version. " +
+  "6. If the text has no actual error but there is a more natural, fluent, or idiomatic " +
+  "way to say it, start your response with 'STYLE:' followed by the full improved " +
+  "version. " +
+  "7. Match the length of the original: a single sentence stays one line; multiple " +
+  "sentences may span multiple lines. " +
+  "8. Never add explanations, commentary, or anything beyond the corrected text. " +
+  "No text before the prefix, nothing after the last corrected sentence."
 
 const SIMILARITY_THRESHOLD = 0.85
+
+const TOAST_DURATIONS = { short: 4000, medium: 8000, long: 12000 }
+const DEFAULT_TOAST_DURATION = 'medium'
 
 // Replaces /tmp/en_tutor_strict_<session_id>.txt. One mod instance runs per
 // Claude Code session process, so a single variable needs no session-id key.
@@ -62,13 +68,24 @@ async function readConfig($) {
   }
 }
 
-// Returns null when the model found nothing to correct (no "EN:" prefix) or
+// Returns null when the model found nothing to correct (no "EN:"/"STYLE:" prefix) or
 // when the "correction" is just an echo of the original prompt.
 function extractCorrection(modelText, originalPrompt) {
   const lines = modelText.split('\n')
   const firstLine = (lines[0] || '').trim()
   const stripped = firstLine.replace(/^>/, '').trim()
-  if (!stripped.toUpperCase().startsWith('EN:')) return null
+
+  let kind = null
+  let prefixLen = 0
+  if (stripped.toUpperCase().startsWith('EN:')) {
+    kind = 'error'
+    prefixLen = 3
+  } else if (stripped.toUpperCase().startsWith('STYLE:')) {
+    kind = 'style'
+    prefixLen = 6
+  } else {
+    return null
+  }
 
   const block = []
   for (const line of lines) {
@@ -76,10 +93,10 @@ function extractCorrection(modelText, originalPrompt) {
     block.push(line.replace(/^>/, '').trim())
   }
 
-  const correctedText = stripped.slice(3).trim()
-  if (correctedText.toLowerCase() === originalPrompt.toLowerCase()) return null
+  const correctedText = stripped.slice(prefixLen).trim()
+  if (normalize(correctedText) === normalize(originalPrompt)) return null
 
-  return { enBlock: block.join('\n'), correctedText }
+  return { kind, enBlock: block.join('\n'), correctedText }
 }
 
 export function register(on) {
@@ -119,7 +136,11 @@ export function register(on) {
     }
 
     if (!strict) {
-      return next({ ...e, context: correction.enBlock })
+      pendingCorrection = null
+      const label = correction.kind === 'style' ? 'More natural' : 'Grammar'
+      const timeoutMs = TOAST_DURATIONS[config.toastDuration] ?? TOAST_DURATIONS[DEFAULT_TOAST_DURATION]
+      $.ui.toast('[EN] ' + label + ': ' + correction.correctedText, { timeoutMs })
+      return next(e)
     }
 
     const isRetry = pendingCorrection !== null
