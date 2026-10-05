@@ -8,6 +8,7 @@
 
 - Default to concise, direct answers. Skip preamble, filler, and trailing summaries.
 - Only provide deep or lengthy explanations when explicitly asked.
+- Structure every answer as: (1) a short pattern/summary first, (2) full explanation after, only if needed.
 
 ## English tutor hook
 
