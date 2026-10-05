@@ -286,6 +286,15 @@ For each pending phase in order:
 Print:
 ━━━ Phase /:  [] ━━━
 
+If `technical-spec.md` documents that this phase depends on an external service
+(e.g. a docker-compose-based test harness, a local database container), **you**
+— the orchestrator, never a scaffolding/TDD sub-agent — start it before invoking
+any agent for this phase, and restart it if this phase adds new schema or
+fixtures the service needs to pick up. Sub-agents' Bash access is scoped to
+language-specific test/build commands only; they cannot manage infrastructure
+themselves. Stop the service again at Step 7 (Close), unless told to leave it
+running.
+
 Then execute according to type.
 
 ---
@@ -412,6 +421,9 @@ Assess whether this phase's goal is fully implemented:
 ---
 
 ## Step 7 — Close
+
+If you started any external service for a phase in Step 6, stop it now, unless
+the user asked to leave it running.
 
 When all phases are complete (or the user halts early), print a final summary:
 
