@@ -1,0 +1,12 @@
+{
+  "name": "jolisper-mods",
+  "owner": { "name": "Jorge Luis Perez" },
+  "description": "Personal Claude Code mods",
+  "plugins": [
+    {
+      "name": "english-tutor",
+      "source": "./english-tutor",
+      "description": "Corrects non-native English phrasing in submitted prompts using an isolated model call"
+    }
+  ]
+}

@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-import json, sys
+import json, subprocess, sys
 from pathlib import Path
 
 SETTINGS_PATH = Path.home() / ".claude" / "settings.json"
 CONFIG_PATH   = Path.home() / ".claude" / "english-tutor.json"
-HOOK_COMMAND  = "python3 ~/.claude/scripts/english-tutor.py"
-HOOK_ENTRY    = {"hooks": [{"type": "command", "command": HOOK_COMMAND}]}
+PLUGIN_ID     = "english-tutor@jolisper-mods"
 
 DEFAULT_CONFIG = {"strict": False}
 
@@ -33,24 +32,20 @@ def toggle_hook():
         print(f"error: invalid JSON: {e}", file=sys.stderr)
         sys.exit(1)
 
-    hooks = data.setdefault("hooks", {})
-    submit_hooks = hooks.setdefault("UserPromptSubmit", [])
+    enabled_plugins = data.get("enabledPlugins", {})
+    currently_enabled = enabled_plugins.get(PLUGIN_ID, True)
+    action = "disable" if currently_enabled else "enable"
 
-    tutor_idx = None
-    for i, group in enumerate(submit_hooks):
-        for hook in group.get("hooks", []):
-            if hook.get("command") == HOOK_COMMAND:
-                tutor_idx = i
-                break
+    result = subprocess.run(
+        ["claude", "plugin", action, PLUGIN_ID],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        print(f"error: {result.stderr.strip()}", file=sys.stderr)
+        sys.exit(1)
 
-    if tutor_idx is not None:
-        submit_hooks.pop(tutor_idx)
-        new_state = "disabled"
-    else:
-        submit_hooks.append(HOOK_ENTRY)
-        new_state = "enabled"
-
-    SETTINGS_PATH.write_text(json.dumps(data, indent=2) + "\n")
+    new_state = "disabled" if action == "disable" else "enabled"
     print(f"status={new_state}")
 
 def set_strict(value: bool):
