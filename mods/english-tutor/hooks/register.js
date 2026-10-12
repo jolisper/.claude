@@ -11,55 +11,18 @@ const SYSTEM_PROMPT =
   "1. If the text is not in English, respond with exactly: OK. " +
   "2. Preserve the original meaning and intent. " +
   "3. Do NOT answer the question or respond to the content. " +
-  "4. Only respond with exactly: OK if the text is already phrased exactly as a native " +
-  "speaker would say it — no grammar issues, no awkward wording, no better idiomatic " +
-  "alternative. If there is a more natural, fluent, or idiomatic way to say it, provide " +
-  "the correction even if the original is grammatically correct. " +
-  "5. Otherwise, start your response with 'EN:' followed by the full corrected version. " +
-  "Match the length of the original: a single sentence stays one line; multiple sentences " +
-  "may span multiple lines. " +
+  "4. Respond with exactly: OK whenever the text has no grammar mistakes, spelling errors, " +
+  "or phrasing a native speaker would not naturally produce — even if a different, equally " +
+  "valid wording also exists. Do not propose a correction merely because an alternative " +
+  "phrasing is possible; only correct text that is actually wrong. " +
+  "5. Otherwise, start your response with 'EN:' followed by the ENTIRE corrected text — " +
+  "never a partial excerpt, summary, or just the sentence that changed. If the input has " +
+  "multiple lines (code, file paths, commands, quoted material, etc.), return every line, " +
+  "unchanged except for the parts that actually needed correction. The output must match " +
+  "the input's full length and line count: a single sentence stays one line; multi-line " +
+  "input gets back the same number of lines. " +
   "6. Never add explanations, commentary, or anything beyond the corrected text. " +
   "No text before 'EN:', nothing after the last corrected sentence."
-
-const SIMILARITY_THRESHOLD = 0.85
-
-// Replaces /tmp/en_tutor_strict_<session_id>.txt. One mod instance runs per
-// Claude Code session process, so a single variable needs no session-id key.
-let pendingCorrection = null
-// The flawed prompt that produced pendingCorrection. A retry identical to
-// this (not actually fixed) must never be approved, however high its
-// similarity to pendingCorrection happens to score — see similarityRatio.
-let pendingOriginal = null
-
-function normalize(text) {
-  return text.toLowerCase().replace(/[^\w\s]/g, '').trim().split(/\s+/).filter(Boolean)
-}
-
-// Approximates difflib.SequenceMatcher.ratio() (2*M/T) using word-level LCS
-// length as M (word, not character, so a single changed word moves the
-// ratio meaningfully instead of being diluted by the surrounding shared
-// characters). Not algorithmically identical to Python's Ratcliff/Obershelp
-// matcher, but close enough to judge whether a retry matches the suggested
-// correction. On its own this still isn't reliable for long sentences with
-// one changed word (the unchanged words dominate the ratio either way) —
-// callers must also check the retry actually differs from pendingOriginal.
-function similarityRatio(a, b) {
-  const wa = normalize(a)
-  const wb = normalize(b)
-  if (wa.length === 0 && wb.length === 0) return 1
-  const m = wa.length
-  const n = wb.length
-  const dp = new Array(n + 1).fill(0)
-  for (let i = 1; i <= m; i++) {
-    let prev = 0
-    for (let j = 1; j <= n; j++) {
-      const temp = dp[j]
-      dp[j] = wa[i - 1] === wb[j - 1] ? prev + 1 : Math.max(dp[j], dp[j - 1])
-      prev = temp
-    }
-  }
-  return (2 * dp[n]) / (m + n)
-}
 
 async function readConfig($) {
   try {
@@ -85,7 +48,11 @@ function extractCorrection(modelText, originalPrompt) {
     block.push(line.replace(/^>/, '').trim())
   }
 
-  const correctedText = stripped.slice(3).trim()
+  // Strip the "EN:" prefix from the whole block, not just the first line —
+  // for multi-line prompts the model may put "EN:" alone on its own line
+  // and the actual correction on the lines that follow (see SYSTEM_PROMPT
+  // rule 5). Using only `stripped` here left correctedText empty in that case.
+  const correctedText = block.join('\n').replace(/^EN:\s*/i, '').trim()
   if (correctedText.toLowerCase() === originalPrompt.toLowerCase()) return null
 
   return { enBlock: block.join('\n'), correctedText }
@@ -96,24 +63,11 @@ export function register(on) {
     const prompt = (e.text || '').trim()
 
     if (prompt.length < 8 || prompt.startsWith('/') || prompt.startsWith('<agent-message')) {
-      pendingCorrection = null
-      pendingOriginal = null
       return next(e)
     }
 
     const config = await readConfig($)
     const strict = config.strict === true
-
-    if (strict && pendingCorrection) {
-      const unchanged = normalize(prompt).join(' ') === normalize(pendingOriginal).join(' ')
-      const ratio = similarityRatio(prompt, pendingCorrection)
-      $.ui.log('DEBUG retry check: prompt=' + JSON.stringify(prompt) + ' pendingCorrection=' + JSON.stringify(pendingCorrection) + ' unchanged=' + unchanged + ' ratio=' + ratio.toFixed(3) + ' threshold=' + SIMILARITY_THRESHOLD)
-      if (!unchanged && ratio >= SIMILARITY_THRESHOLD) {
-        pendingCorrection = null
-        pendingOriginal = null
-        return next(e)
-      }
-    }
 
     const r = await $.model.complete({
       model: 'haiku',
@@ -124,15 +78,11 @@ export function register(on) {
     })
 
     if (!r.isAnswered) {
-      pendingCorrection = null
-      pendingOriginal = null
       return next(e)
     }
 
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
-      pendingCorrection = null
-      pendingOriginal = null
       return next(e)
     }
 
@@ -140,14 +90,11 @@ export function register(on) {
       return next({ ...e, context: correction.enBlock })
     }
 
-    const isRetry = pendingCorrection !== null
-    $.ui.log('DEBUG new correction: prompt=' + JSON.stringify(prompt) + ' correctedText=' + JSON.stringify(correction.correctedText) + ' isRetry=' + isRetry)
-    pendingCorrection = correction.correctedText
-    pendingOriginal = prompt
-    const label = isRetry ? 'Still not quite right — try again' : 'Correct your English before continuing'
     // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
+    // correctedText can itself span multiple lines, so collapse it before embedding.
+    const singleLineCorrection = correction.correctedText.replace(/\s*\n\s*/g, ' ')
     return {
-      drop: '[EN Strict] ' + label + ': "' + correction.correctedText + '" — retype your message using this phrasing.',
+      drop: '[EN Strict] Correct your English before continuing: "' + singleLineCorrection + '" — retype your message using this phrasing.',
     }
   })
 }
