@@ -11,18 +11,23 @@ const SYSTEM_PROMPT =
   "1. If the text is not in English, respond with exactly: OK. " +
   "2. Preserve the original meaning and intent. " +
   "3. Do NOT answer the question or respond to the content. " +
-  "4. Respond with exactly: OK whenever the text has no grammar mistakes, spelling errors, " +
-  "or phrasing a native speaker would not naturally produce — even if a different, equally " +
-  "valid wording also exists. Do not propose a correction merely because an alternative " +
-  "phrasing is possible; only correct text that is actually wrong. " +
-  "5. Otherwise, start your response with 'EN:' followed by the ENTIRE corrected text — " +
-  "never a partial excerpt, summary, or just the sentence that changed. If the input has " +
-  "multiple lines (code, file paths, commands, quoted material, etc.), return every line, " +
-  "unchanged except for the parts that actually needed correction. The output must match " +
-  "the input's full length and line count: a single sentence stays one line; multi-line " +
-  "input gets back the same number of lines. " +
-  "6. Never add explanations, commentary, or anything beyond the corrected text. " +
-  "No text before 'EN:', nothing after the last corrected sentence."
+  "4. Only respond with exactly: OK if the text is already phrased exactly as a native " +
+  "speaker would say it — no grammar issues, no spelling mistakes, no punctuation " +
+  "mistakes, no awkward wording, no better idiomatic alternative. " +
+  "5. If the text has an actual error — grammar, spelling, or punctuation — start your " +
+  "response with 'EN:' followed by the ENTIRE corrected text. " +
+  "6. If the text has no actual error but there is a more natural, fluent, or idiomatic " +
+  "way to say it, start your response with 'STYLE:' followed by the ENTIRE improved text. " +
+  "7. Either way, never a partial excerpt, summary, or just the sentence that changed. If " +
+  "the input has multiple lines (code, file paths, commands, quoted material, etc.), " +
+  "return every line, unchanged except for the parts that actually needed correction. The " +
+  "output must match the input's full length and line count: a single sentence stays one " +
+  "line; multi-line input gets back the same number of lines. " +
+  "8. Never add explanations, commentary, or anything beyond the corrected text. " +
+  "No text before the prefix, nothing after the last corrected sentence."
+
+const TOAST_DURATIONS = { short: 4000, medium: 8000, long: 12000 }
+const DEFAULT_TOAST_DURATION = 'medium'
 
 async function readConfig($) {
   try {
@@ -34,13 +39,24 @@ async function readConfig($) {
   }
 }
 
-// Returns null when the model found nothing to correct (no "EN:" prefix) or
+// Returns null when the model found nothing to correct (no "EN:"/"STYLE:" prefix) or
 // when the "correction" is just an echo of the original prompt.
 function extractCorrection(modelText, originalPrompt) {
   const lines = modelText.split('\n')
   const firstLine = (lines[0] || '').trim()
   const stripped = firstLine.replace(/^>/, '').trim()
-  if (!stripped.toUpperCase().startsWith('EN:')) return null
+
+  let kind = null
+  let prefix = null
+  if (stripped.toUpperCase().startsWith('EN:')) {
+    kind = 'error'
+    prefix = 'EN:'
+  } else if (stripped.toUpperCase().startsWith('STYLE:')) {
+    kind = 'style'
+    prefix = 'STYLE:'
+  } else {
+    return null
+  }
 
   const block = []
   for (const line of lines) {
@@ -48,14 +64,15 @@ function extractCorrection(modelText, originalPrompt) {
     block.push(line.replace(/^>/, '').trim())
   }
 
-  // Strip the "EN:" prefix from the whole block, not just the first line —
-  // for multi-line prompts the model may put "EN:" alone on its own line
+  // Strip the prefix from the whole block, not just the first line — for
+  // multi-line prompts the model may put the prefix alone on its own line
   // and the actual correction on the lines that follow (see SYSTEM_PROMPT
-  // rule 5). Using only `stripped` here left correctedText empty in that case.
-  const correctedText = block.join('\n').replace(/^EN:\s*/i, '').trim()
+  // rule 7). Using only the first line here left correctedText empty in
+  // that case.
+  const correctedText = block.join('\n').replace(new RegExp('^' + prefix + '\\s*', 'i'), '').trim()
   if (correctedText.toLowerCase() === originalPrompt.toLowerCase()) return null
 
-  return { enBlock: block.join('\n'), correctedText }
+  return { kind, enBlock: block.join('\n'), correctedText }
 }
 
 export function register(on) {
@@ -86,8 +103,16 @@ export function register(on) {
       return next(e)
     }
 
-    if (!strict) {
-      return next({ ...e, context: correction.enBlock })
+    // Style suggestions never block, in strict mode or not — only an actual
+    // error (kind 'error') gates submission. This is what stops strict mode
+    // from looping forever on subjective rephrasings Haiku keeps proposing
+    // differently each call (see the "English-Tutor Hook to Mod Migration"
+    // note for the incident that led here).
+    if (!strict || correction.kind === 'style') {
+      const label = correction.kind === 'style' ? 'More natural' : 'Grammar'
+      const timeoutMs = TOAST_DURATIONS[config.toastDuration] ?? TOAST_DURATIONS[DEFAULT_TOAST_DURATION]
+      $.ui.toast('[EN] ' + label + ': ' + correction.correctedText, { timeoutMs })
+      return next(e)
     }
 
     // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
