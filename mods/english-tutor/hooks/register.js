@@ -29,6 +29,13 @@ const SYSTEM_PROMPT =
 const TOAST_DURATIONS = { short: 4000, medium: 8000, long: 12000 }
 const DEFAULT_TOAST_DURATION = 'medium'
 
+// Strict mode only: true once a style-only correction has been dropped
+// without a grammar correction or a clean submission since. A second
+// consecutive style flag means grammar is already confirmed clean, so
+// there's nothing left worth blocking on — only a grammar correction or a
+// clean submission resets this.
+let styleStreak = false
+
 async function readConfig($) {
   try {
     const home = await $.env.get('HOME')
@@ -80,6 +87,7 @@ export function register(on) {
     const prompt = (e.text || '').trim()
 
     if (prompt.length < 8 || prompt.startsWith('/') || prompt.startsWith('<agent-message')) {
+      styleStreak = false
       return next(e)
     }
 
@@ -95,24 +103,31 @@ export function register(on) {
     })
 
     if (!r.isAnswered) {
+      styleStreak = false
       return next(e)
     }
 
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
+      styleStreak = false
       return next(e)
     }
 
-    // Style suggestions never block, in strict mode or not — only an actual
-    // error (kind 'error') gates submission. This is what stops strict mode
-    // from looping forever on subjective rephrasings Haiku keeps proposing
-    // differently each call (see the "English-Tutor Hook to Mod Migration"
-    // note for the incident that led here).
-    if (!strict || correction.kind === 'style') {
+    if (!strict) {
       const label = correction.kind === 'style' ? 'More natural' : 'Grammar'
       const timeoutMs = TOAST_DURATIONS[config.toastDuration] ?? TOAST_DURATIONS[DEFAULT_TOAST_DURATION]
       $.ui.toast('[EN] ' + label + ': ' + correction.correctedText, { timeoutMs })
       return next(e)
+    }
+
+    if (correction.kind === 'style') {
+      if (styleStreak) {
+        // Second style correction in a row — grammar is already fine, don't block.
+        return next(e)
+      }
+      styleStreak = true
+    } else {
+      styleStreak = false
     }
 
     // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
