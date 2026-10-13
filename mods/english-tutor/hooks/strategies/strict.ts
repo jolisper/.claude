@@ -1,27 +1,24 @@
-import type { Strategy } from '../types.ts'
+import type { Correction, Strategy } from '../types.ts'
 import { correctionLabel } from '../label.ts'
 
 export function createStrictStrategy(): Strategy {
-  // true once a style-only correction has been dropped without a grammar
-  // correction or a clean submission since. A second consecutive style flag
-  // means grammar is already confirmed clean, so there's nothing left worth
-  // blocking on — only a grammar correction or a clean submission resets this.
-  let styleStreak = false
+  // The kind of the last correction that was blocked, or null once reset. A
+  // second consecutive correction of the same kind passes through — Haiku
+  // flagging the same kind of issue twice in a row, even with different
+  // wording, is a strong signal it's nagging rather than catching a real
+  // problem (e.g. flip-flopping between singular and plural). Only a
+  // different kind or a clean submission resets this.
+  let blockedKind: Correction['kind'] | null = null
 
   return {
     reset() {
-      styleStreak = false
+      blockedKind = null
     },
-    decide(config, correction) {
-      if (correction.kind === 'style') {
-        if (styleStreak) {
-          // Second style correction in a row — grammar is already fine, don't block.
-          return { type: 'pass' }
-        }
-        styleStreak = true
-      } else {
-        styleStreak = false
+    decide(_config, correction) {
+      if (correction.kind === blockedKind) {
+        return { type: 'pass' }
       }
+      blockedKind = correction.kind
 
       // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
       // correctedText can itself span multiple lines, so collapse it before embedding.

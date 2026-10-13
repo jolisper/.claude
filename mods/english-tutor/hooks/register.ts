@@ -30,7 +30,11 @@ const SYSTEM_PROMPT =
   "output must match the input's full length and line count: a single sentence stays one " +
   "line; multi-line input gets back the same number of lines. " +
   "8. Never add explanations, commentary, or anything beyond the corrected text. " +
-  "No text before the prefix, nothing after the last corrected sentence."
+  "No text before the prefix, nothing after the last corrected sentence. " +
+  "9. If a fix depends on something only the author knows — such as whether a noun should " +
+  "be singular or plural, or which of two valid words they meant — treat it as STYLE, not " +
+  "EN. Reserve EN for mistakes that are wrong under any reasonable reading: misspellings, " +
+  "subject-verb disagreement, wrong verb tense, and similar unambiguous errors."
 
 const strictStrategy = createStrictStrategy()
 
