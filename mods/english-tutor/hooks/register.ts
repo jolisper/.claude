@@ -3,6 +3,12 @@
 // subprocess call provided — see the "English-Tutor Hook to Mod Migration"
 // note for the full rationale.
 
+import type { EngineInterface, On } from 'claude-code'
+import type { Config, Correction } from './types.ts'
+import { Mode } from './mode.ts'
+import { lenientStrategy } from './strategies/lenient.ts'
+import { createStrictStrategy } from './strategies/strict.ts'
+
 const SYSTEM_PROMPT =
   "You are a concise English writing coach for non-native speakers. Your job is to " +
   "rewrite the text as a native English speaker would naturally say it — fixing grammar, " +
@@ -26,17 +32,14 @@ const SYSTEM_PROMPT =
   "8. Never add explanations, commentary, or anything beyond the corrected text. " +
   "No text before the prefix, nothing after the last corrected sentence."
 
-const TOAST_DURATIONS = { short: 4000, medium: 8000, long: 12000 }
-const DEFAULT_TOAST_DURATION = 'medium'
+const strictStrategy = createStrictStrategy()
 
-// Strict mode only: true once a style-only correction has been dropped
-// without a grammar correction or a clean submission since. A second
-// consecutive style flag means grammar is already confirmed clean, so
-// there's nothing left worth blocking on — only a grammar correction or a
-// clean submission resets this.
-let styleStreak = false
+const STRATEGIES = {
+  [Mode.Lenient]: lenientStrategy,
+  [Mode.Strict]: strictStrategy,
+}
 
-async function readConfig($) {
+async function readConfig($: EngineInterface): Promise<Config> {
   try {
     const home = await $.env.get('HOME')
     const text = await $.fs.read(home + '/.claude/english-tutor.json')
@@ -48,13 +51,13 @@ async function readConfig($) {
 
 // Returns null when the model found nothing to correct (no "EN:"/"STYLE:" prefix) or
 // when the "correction" is just an echo of the original prompt.
-function extractCorrection(modelText, originalPrompt) {
+function extractCorrection(modelText: string, originalPrompt: string): Correction | null {
   const lines = modelText.split('\n')
   const firstLine = (lines[0] || '').trim()
   const stripped = firstLine.replace(/^>/, '').trim()
 
-  let kind = null
-  let prefix = null
+  let kind: 'error' | 'style'
+  let prefix: string
   if (stripped.toUpperCase().startsWith('EN:')) {
     kind = 'error'
     prefix = 'EN:'
@@ -65,7 +68,7 @@ function extractCorrection(modelText, originalPrompt) {
     return null
   }
 
-  const block = []
+  const block: string[] = []
   for (const line of lines) {
     if (!line.trim()) break
     block.push(line.replace(/^>/, '').trim())
@@ -82,17 +85,18 @@ function extractCorrection(modelText, originalPrompt) {
   return { kind, enBlock: block.join('\n'), correctedText }
 }
 
-export function register(on) {
+export function register(on: On) {
   on('prompt.submit', async ($, e, next) => {
     const prompt = (e.text || '').trim()
 
     if (prompt.length < 8 || prompt.startsWith('/') || prompt.startsWith('<agent-message')) {
-      styleStreak = false
+      strictStrategy.reset()
       return next(e)
     }
 
     const config = await readConfig($)
-    const strict = config.strict === true
+    const mode = config.strict === true ? Mode.Strict : Mode.Lenient
+    const strategy = STRATEGIES[mode]
 
     const r = await $.model.complete({
       model: 'haiku',
@@ -103,38 +107,25 @@ export function register(on) {
     })
 
     if (!r.isAnswered) {
-      styleStreak = false
+      strictStrategy.reset()
       return next(e)
     }
 
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
-      styleStreak = false
+      strictStrategy.reset()
       return next(e)
     }
 
-    if (!strict) {
-      const label = correction.kind === 'style' ? 'More natural' : 'Grammar'
-      const timeoutMs = TOAST_DURATIONS[config.toastDuration] ?? TOAST_DURATIONS[DEFAULT_TOAST_DURATION]
-      $.ui.toast('[EN] ' + label + ': ' + correction.correctedText, { timeoutMs })
-      return next(e)
-    }
-
-    if (correction.kind === 'style') {
-      if (styleStreak) {
-        // Second style correction in a row — grammar is already fine, don't block.
+    const action = strategy.decide(config, correction)
+    switch (action.type) {
+      case 'toast':
+        $.ui.toast('[EN] ' + action.label + ': ' + action.text, { timeoutMs: action.timeoutMs })
         return next(e)
-      }
-      styleStreak = true
-    } else {
-      styleStreak = false
-    }
-
-    // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
-    // correctedText can itself span multiple lines, so collapse it before embedding.
-    const singleLineCorrection = correction.correctedText.replace(/\s*\n\s*/g, ' ')
-    return {
-      drop: '[EN Strict] Correct your English before continuing: "' + singleLineCorrection + '" — retype your message using this phrasing.',
+      case 'drop':
+        return { drop: action.message }
+      case 'pass':
+        return next(e)
     }
   })
 }
