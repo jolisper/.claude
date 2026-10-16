@@ -1,7 +1,7 @@
 ---
 name: english-tutor
-description: Toggle the English tutor hook on or off, or enable/disable strict mode. Invoke when the user types `/english-tutor` or asks to enable/disable English corrections or strict mode.
-version: 1.1.0
+description: Toggle the English tutor hook on or off, enable/disable strict mode, or review logged mistakes and get recommendations. Invoke when the user types `/english-tutor` or asks to enable/disable English corrections or strict mode.
+version: 1.2.0
 disable-model-invocation: true
 allowed-tools: Bash(python3:*)
 effort: low
@@ -10,6 +10,7 @@ effort: low
 ## Available scripts
 
 - `~/.claude/skills/english-tutor/scripts/toggle.py` — manages the English tutor hook and its config
+- `~/.claude/skills/english-tutor/scripts/stats.py` — summarizes the daily logs in `~/.english-tutor/logs/`
 
 ## Steps
 
@@ -38,6 +39,29 @@ python3 ~/.claude/skills/english-tutor/scripts/toggle.py strict off
 Parse stdout for `strict=<value>`:
 - `strict=on`  → "Strict mode is now **on**. Messages with English errors will be blocked until corrected."
 - `strict=off` → "Strict mode is now **off**. English corrections will be shown as hints only."
+
+### Review mistakes (`review [days]`, default 30)
+
+```
+python3 ~/.claude/skills/english-tutor/scripts/stats.py [days]
+```
+
+Stdout is `key=value` metrics (`days`, `checked`, `clean`, `error`, `style`,
+`blocked`), then a `--- corrections` line followed by one JSON object per
+correction: `{"kind", "original", "corrected"}`.
+
+If `checked=0`, say there are no logged interactions in that period yet and stop.
+
+Otherwise respond with:
+1. **Metrics** — a short table: prompts checked, error rate (`error/checked`),
+   style rate (`style/checked`), blocked count.
+2. **Most common mistakes** — compare each `original` with its `corrected` and
+   group the changes into categories (e.g. articles, prepositions, verb tense,
+   subject-verb agreement, word order, spelling, word choice, punctuation,
+   unnatural phrasing). Rank the top 5 by count, with one or two short
+   before → after examples from the user's own text for each.
+3. **Recommendations** — 3–5 concrete, actionable tips targeting the top
+   categories (a rule of thumb, a pattern to watch for). No generic advice.
 
 ## Failure handling
 
