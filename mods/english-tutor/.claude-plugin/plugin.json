@@ -1,6 +1,6 @@
 {
   "name": "english-tutor",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Corrects non-native English phrasing in submitted prompts using an isolated model call",
   "author": { "name": "Jorge Luis Perez" }
 }
