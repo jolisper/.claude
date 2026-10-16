@@ -4,7 +4,7 @@
 // note for the full rationale.
 
 import type { EngineInterface, On } from 'claude-code'
-import type { Config, Correction } from './types.ts'
+import type { Config, Correction, StrategyAction } from './types.ts'
 import { Mode } from './mode.ts'
 import { lenientStrategy } from './strategies/lenient.ts'
 import { createStrictStrategy } from './strategies/strict.ts'
@@ -51,6 +51,36 @@ async function readConfig($: EngineInterface): Promise<Config> {
   } catch {
     return {}
   }
+}
+
+interface LogEntry {
+  mode: string
+  result: 'clean' | Correction['kind']
+  original: string
+  corrected?: string
+  action?: StrategyAction['type']
+}
+
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+// One JSONL file per local day under ~/.english-tutor/logs/. $.fs has no
+// append, so each entry rewrites that day's file — splitting by day keeps the
+// rewrite small and every file far below $.fs.read's 4 MiB cap. Logging must
+// never block a prompt, so any failure is swallowed.
+async function logInteraction($: EngineInterface, entry: LogEntry): Promise<void> {
+  try {
+    const now = new Date()
+    const day = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+    const home = await $.env.get('HOME')
+    const path = home + '/.english-tutor/logs/' + day + '.jsonl'
+    let existing = ''
+    try {
+      existing = await $.fs.read(path)
+    } catch {}
+    await $.fs.write(path, existing + JSON.stringify({ ts: now.toISOString(), ...entry }) + '\n')
+  } catch {}
 }
 
 // Returns null when the model found nothing to correct (no "EN:"/"STYLE:" prefix) or
@@ -118,10 +148,18 @@ export function register(on: On) {
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
       strictStrategy.reset()
+      await logInteraction($, { mode, result: 'clean', original: prompt })
       return next(e)
     }
 
     const action = strategy.decide(config, correction)
+    await logInteraction($, {
+      mode,
+      result: correction.kind,
+      original: prompt,
+      corrected: correction.correctedText,
+      action: action.type,
+    })
     switch (action.type) {
       case 'toast':
         $.ui.toast('[EN] ' + action.label + ': ' + action.text, { timeoutMs: action.timeoutMs })
