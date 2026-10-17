@@ -20,7 +20,7 @@ export function createStrictStrategy(): Strategy {
       }
       blockedKind = correction.kind
 
-      // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288 (reported upstream).
+      // Single line: embedded \n in a drop reason renders as U+FFFD on 2.1.288, still on 2.1.300 (reported upstream).
       // correctedText can itself span multiple lines, so collapse it before embedding.
       const singleLineCorrection = correction.correctedText.replace(/\s*\n\s*/g, ' ')
       return {
