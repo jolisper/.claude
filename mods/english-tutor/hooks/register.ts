@@ -54,6 +54,7 @@ async function readConfig($: EngineInterface): Promise<Config> {
 }
 
 interface LogEntry {
+  session?: string
   mode: string
   result: 'clean' | Correction['kind']
   original: string
@@ -129,6 +130,10 @@ export function register(on: On) {
     }
 
     const config = await readConfig($)
+    let session: string | undefined
+    try {
+      session = await $.session.id()
+    } catch {}
     const mode = config.strict === true ? Mode.Strict : Mode.Lenient
     const strategy = STRATEGIES[mode]
 
@@ -148,12 +153,13 @@ export function register(on: On) {
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
       strictStrategy.reset()
-      await logInteraction($, { mode, result: 'clean', original: prompt })
+      await logInteraction($, { session, mode, result: 'clean', original: prompt })
       return next(e)
     }
 
     const action = strategy.decide(config, correction)
     await logInteraction($, {
+      session,
       mode,
       result: correction.kind,
       original: prompt,
