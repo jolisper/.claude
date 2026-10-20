@@ -18,7 +18,17 @@ export type StrategyAction =
   | { type: 'drop'; message: string }
   | { type: 'pass' }
 
+// One line of ~/.english-tutor/logs/<day>.jsonl.
+export interface LogEntry {
+  session?: string
+  mode: string
+  result: 'clean' | Correction['kind']
+  original: string
+  corrected?: string
+  action?: StrategyAction['type']
+}
+
+// `previous` is the most recent log entry of the same session, or null.
 export interface Strategy {
-  reset(): void
-  decide(config: Config, correction: Correction): StrategyAction
+  decide(config: Config, correction: Correction, previous: LogEntry | null): StrategyAction
 }

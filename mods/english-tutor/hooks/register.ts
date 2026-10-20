@@ -4,7 +4,7 @@
 // note for the full rationale.
 
 import type { EngineInterface, On } from 'claude-code'
-import type { Config, Correction, StrategyAction } from './types.ts'
+import type { Config, Correction, LogEntry } from './types.ts'
 import { Mode } from './mode.ts'
 import { lenientStrategy } from './strategies/lenient.ts'
 import { createStrictStrategy } from './strategies/strict.ts'
@@ -53,17 +53,31 @@ async function readConfig($: EngineInterface): Promise<Config> {
   }
 }
 
-interface LogEntry {
-  session?: string
-  mode: string
-  result: 'clean' | Correction['kind']
-  original: string
-  corrected?: string
-  action?: StrategyAction['type']
-}
-
 function pad(n: number): string {
   return String(n).padStart(2, '0')
+}
+
+function logPath(home: string, now: Date): string {
+  const day = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
+  return home + '/.english-tutor/logs/' + day + '.jsonl'
+}
+
+// The most recent entry logged by this session today, or null. Entries from
+// other sessions are ignored, so the strict-mode pass rule is per session.
+async function lastSessionEntry($: EngineInterface, session: string | undefined): Promise<LogEntry | null> {
+  if (!session) return null
+  try {
+    const home = await $.env.get('HOME')
+    const lines = (await $.fs.read(logPath(home, new Date()))).split('\n')
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (!lines[i].trim()) continue
+      try {
+        const entry = JSON.parse(lines[i])
+        if (entry.session === session) return entry
+      } catch {}
+    }
+  } catch {}
+  return null
 }
 
 // One JSONL file per local day under ~/.english-tutor/logs/. $.fs has no
@@ -73,9 +87,8 @@ function pad(n: number): string {
 async function logInteraction($: EngineInterface, entry: LogEntry): Promise<void> {
   try {
     const now = new Date()
-    const day = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate())
     const home = await $.env.get('HOME')
-    const path = home + '/.english-tutor/logs/' + day + '.jsonl'
+    const path = logPath(home, now)
     let existing = ''
     try {
       existing = await $.fs.read(path)
@@ -125,7 +138,6 @@ export function register(on: On) {
     const prompt = (e.text || '').trim()
 
     if (prompt.length < 8 || prompt.startsWith('/') || prompt.startsWith('<agent-message')) {
-      strictStrategy.reset()
       return next(e)
     }
 
@@ -146,18 +158,16 @@ export function register(on: On) {
     })
 
     if (!r.isAnswered) {
-      strictStrategy.reset()
       return next(e)
     }
 
     const correction = extractCorrection(r.text.trim(), prompt)
     if (!correction) {
-      strictStrategy.reset()
       await logInteraction($, { session, mode, result: 'clean', original: prompt })
       return next(e)
     }
 
-    const action = strategy.decide(config, correction)
+    const action = strategy.decide(config, correction, await lastSessionEntry($, session))
     await logInteraction($, {
       session,
       mode,

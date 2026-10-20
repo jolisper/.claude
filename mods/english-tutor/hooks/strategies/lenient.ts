@@ -6,7 +6,6 @@ const DEFAULT_TOAST_DURATION = 'medium'
 
 // Never blocks — just surfaces the correction as a toast.
 export const lenientStrategy: Strategy = {
-  reset() {},
   decide(config, correction) {
     const timeoutMs = TOAST_DURATIONS[config.toastDuration ?? DEFAULT_TOAST_DURATION] ?? TOAST_DURATIONS[DEFAULT_TOAST_DURATION]
     return { type: 'toast', label: correctionLabel(correction), text: correction.correctedText, timeoutMs }
