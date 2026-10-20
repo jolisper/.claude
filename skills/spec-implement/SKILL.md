@@ -404,11 +404,16 @@ Cycle: .
 
 Assess whether this phase's goal is fully implemented:
 
-- **After 5 cycles without completion**: print a check-in and ask the user
-  whether the scope is as expected or whether to adjust the phase boundary.
-- **After 7 cycles without completion**: stop. Report what was and was not
-  implemented. Ask the user to either continue (extend the budget), split the
-  phase, or proceed to the next phase leaving this one partial.
+- **Default is to continue.** Completeness is judged against the spec excerpt,
+  not a cycle count: list every function, endpoint, component, error path, and
+  covered invariant in the phase, and keep cycling until each has a passing
+  test. A phase with many behaviors legitimately needs many cycles.
+- **After 15 cycles without completion**: print a one-line progress note
+  (covered / remaining) and **keep going** — do not ask.
+- **Hard stop only when stalled**: stop and ask the user only if 3 consecutive
+  cycles add no new covered behavior (e.g. Red keeps producing already-passing
+  tests, or Green cannot pass), or after 30 cycles. Report what was and was not
+  implemented, and offer: continue, split the phase, or move on leaving it partial.
 - **When complete**: print `✓ Phase <N> complete`, then:
   1. Update `last-completed-phase: <N>` in the log frontmatter.
   2. Append a phase section to the log:
@@ -417,6 +422,17 @@ Assess whether this phase's goal is fully implemented:
      <phase summary: behaviors tested, files written, cycles taken, deviations from spec>
      ~~~
   3. Move to the next phase.
+
+---
+
+### Do not stop early
+
+After Step 4's confirmation, run Steps 6–7 to completion without pausing. Do
+not end your turn, summarize progress, or ask "shall I continue?" between
+cycles or between phases. The only legal stops are those in **When to Stop and
+Ask**, the stall rule in 6f, and an agent failure. A phase is complete only
+when every behavior in its spec excerpt has a passing test — never because
+the first few cycles went green.
 
 ---
 
