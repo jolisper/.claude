@@ -230,6 +230,8 @@ if [ "$model" = "on" ]; then
   else
     # Cloud: show the running model from input JSON; append (d) when no explicit model is set
     # Explicit sources: --model flag on the claude process → ANTHROPIC_MODEL → settings files
+    # Limitation: a resumed session (--continue) whose model came from an earlier /model pick is not
+    # detectable (the payload has no source field), so it shows (d) even though the pick is explicit
     _explicit=""
     _pid=$PPID
     while [ -n "$_pid" ] && [ "$_pid" -gt 1 ]; do
