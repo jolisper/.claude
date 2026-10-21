@@ -39,4 +39,5 @@ statusline/statusline.local.conf
 agents/*.bak
 skills/synced/
 mods/*/tsconfig.json
+__pycache__/
 
