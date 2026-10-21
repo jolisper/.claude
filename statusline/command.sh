@@ -228,12 +228,31 @@ if [ "$model" = "on" ]; then
     _model=$(echo "$input" | jq -r '.model.id? // .model.display_name? // .model // ""')
     [ -n "$_model" ] && model_label_str="[~${_model}] "
   else
-    # Cloud: project local → project shared → user global (where /model writes); fallback to "default"
-    _model=""
-    [ -f "$cwd/.claude/settings.local.json" ] && _model=$(jq -r '.model // ""' "$cwd/.claude/settings.local.json" 2>/dev/null)
-    [ -z "$_model" ] && [ -f "$cwd/.claude/settings.json" ] && _model=$(jq -r '.model // ""' "$cwd/.claude/settings.json" 2>/dev/null)
-    [ -z "$_model" ] && [ -f "$HOME/.claude/settings.json" ] && _model=$(jq -r '.model // ""' "$HOME/.claude/settings.json" 2>/dev/null)
-    [ -z "$_model" ] && _model="default"
+    # Cloud: show the running model from input JSON; append (d) when no explicit model is set
+    # Explicit sources: --model flag on the claude process → ANTHROPIC_MODEL → settings files
+    _explicit=""
+    _pid=$PPID
+    while [ -n "$_pid" ] && [ "$_pid" -gt 1 ]; do
+      _args=$(ps -o args= -p "$_pid")
+      case "$_args" in
+        claude|claude\ *|*/claude|*/claude\ *)
+          case "$_args " in *" --model"[\ =]*) _explicit=flag ;; esac
+          break ;;
+      esac
+      _pid=$(ps -o ppid= -p "$_pid" | tr -d ' ')
+    done
+    [ -z "$_explicit" ] && [ -n "$ANTHROPIC_MODEL" ] && _explicit=env
+    if [ -z "$_explicit" ]; then
+      # project local → project shared → user global (where /model writes)
+      _set=""
+      [ -f "$cwd/.claude/settings.local.json" ] && _set=$(jq -r '.model // ""' "$cwd/.claude/settings.local.json" 2>/dev/null)
+      [ -z "$_set" ] && [ -f "$cwd/.claude/settings.json" ] && _set=$(jq -r '.model // ""' "$cwd/.claude/settings.json" 2>/dev/null)
+      [ -z "$_set" ] && [ -f "$HOME/.claude/settings.json" ] && _set=$(jq -r '.model // ""' "$HOME/.claude/settings.json" 2>/dev/null)
+      [ -n "$_set" ] && [ "$_set" != "default" ] && _explicit=settings
+    fi
+    _model=$(echo "$input" | jq -r '.model.display_name // .model.id // ""')
+    [ -z "$_model" ] && _model="unknown"
+    [ -z "$_explicit" ] && _model="${_model}(d)"
     model_label_str="[^${_model}] "
   fi
 fi
