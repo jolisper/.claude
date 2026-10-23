@@ -34,7 +34,10 @@ const SYSTEM_PROMPT =
   "9. If a fix depends on something only the author knows — such as whether a noun should " +
   "be singular or plural, or which of two valid words they meant — treat it as STYLE, not " +
   "EN. Reserve EN for mistakes that are wrong under any reasonable reading: misspellings, " +
-  "subject-verb disagreement, wrong verb tense, and similar unambiguous errors."
+  "subject-verb disagreement, wrong verb tense, and similar unambiguous errors. " +
+  "10. Never treat a lowercase first letter of the text or of a sentence as an error, and " +
+  "never correct it, or restyle the text because of it. Keep the author's casing there. " +
+  "Proper names (people, places, products, 'I') must still be capitalized."
 
 const strictStrategy = createStrictStrategy()
 
