@@ -59,17 +59,36 @@ Read each in sequence. Stop at the first missing one:
   ```
   initiatives/<name>/logbook.md not found. Run /spec-implement first.
   ```
-- A run recipe — use Glob to find `<root>/.claude/skills/run-*/SKILL.md`. Take the
-  first match as `<run-recipe>`. If none found:
-  ```
-  No run recipe found under .claude/skills/run-*/
+- A run recipe — use Glob to find `<root>/.claude/skills/run-*/SKILL.md` and collect ALL
+  matches.
+  - If none found:
+    ```
+    No run recipe found under .claude/skills/run-*/
 
-  Run /run-skill-generator to create one. It will launch the app from a clean
-  environment, capture what worked, and write the recipe automatically.
+    Run /run-skill-generator to create one. It will launch the app from a clean
+    environment, capture what worked, and write the recipe automatically.
 
-  Once the recipe exists, re-run /spec-verify-dynamic <name>.
-  ```
-  Do not create the recipe — that is the user's responsibility.
+    Once the recipe exists, re-run /spec-verify-dynamic <name>.
+    ```
+    Do not create the recipe — that is the user's responsibility.
+  - If exactly one: use it as `<run-recipe>`.
+  - If more than one: do NOT take the first. Read each candidate's frontmatter (`name`,
+    `description`) and enough of its body to understand what it launches and exercises.
+    Decide which one can actually exercise this initiative by comparing against
+    `functional-spec.md` (summary and invariants), `logbook.md` (implementation files)
+    and the initiative name (a recipe named `run-<name>` is a strong signal but not
+    conclusive). Print the candidates and a recommendation with a one-line reason each,
+    then ask with a plain-text menu (never AskUserQuestion):
+    ```
+    Multiple run recipes found. Recommended: <recipe> — <reason>.
+    (a) Use <recommended> (recommended)
+    (b) Use <other>
+    ...
+    (<next>) Cancel
+    ```
+    Letters are sequential. Wait for the user's reply before continuing. On Cancel, stop.
+    Never launch the app, restart anything, or proceed past Step 3 until the user has
+    confirmed. The confirmed recipe is `<run-recipe>` for Step 6.
 
 ## Step 4 — Clear previous report
 
