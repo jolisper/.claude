@@ -10,13 +10,19 @@ description: >
   spec-technical.
 disable-model-invocation: true
 argument-hint: "<initiative-name> | <path to technical-spec.md>"
-allowed-tools: Read Glob Bash Write Edit Agent
+allowed-tools: Read Glob Bash Agent
 when_to_use: >
   When you want to implement a full technical-spec.md spec using TDD for logic phases
   and a setup agent for scaffolding phases. Run after spec-technical has produced
   a technical-spec.md. Invoke as /spec-implement <name> or
   /spec-implement <path-to-technical-spec.md>.
 effort: high
+hooks:
+  PreToolUse:
+    - matcher: "Write|Edit|Bash"
+      hooks:
+        - type: command
+          command: "python3 ~/.claude/skills/spec-implement/scripts/guard.py"
 ---
 
 # spec-implement
@@ -27,6 +33,26 @@ config, schema DDL, project setup) are handed to a setup agent. Logic phases
 (pure functions, handlers, API endpoints, UI components) are driven by
 red-green-refactor TDD cycles.
 
+## Scripts
+
+Bookkeeping is done by scripts, not by hand. Run each as
+`python3 ~/.claude/skills/spec-implement/scripts/<name>.py <flags>` — one command per
+Bash call, no chaining. Each prints `key=value` lines starting with `status=` (the
+scanner prints JSON); `status=error` carries `message=` and `hint=` and exits 2. Run a
+script with `--help` for its flags.
+
+| Script | Does |
+|---|---|
+| `resolve-spec.py` | Step 1: argument to spec paths |
+| `scan-project.py` | Step 2 and phase prerequisites: existing files, runners, layers with no test harness |
+| `log.py` | Every `logbook.md` write: `init`, `resume`, `cycle`, `cycle-done`, `phase-done`, `close` |
+| `stall.py` | Step 6f: continue / note / stop decision from the logged cycles |
+| `guard.py` | Hook (frontmatter): blocks the orchestrator from writing anything but the logbook |
+
+**If a script exits non-zero:** print its `message=` and `hint=`, and stop. Do not
+re-implement what the script does by hand, and do not retry with different flags unless
+the hint says to.
+
 ## HARD CONSTRAINTS
 
 **You must never write source code, config files, or test files.** This applies
@@ -34,125 +60,69 @@ unconditionally — not even as a workaround:
 
 - Do not call `Write`, `Edit`, or `Bash` to create or modify any implementation,
   test, build, or config file.
-- Do not use heredocs, `cat >`, `tee`, or any shell command to write code.
-- The only files you may write are the master log (`initiatives/<name>/logbook.md`)
-  and phase log entries within it.
+- Do not use heredocs, `cat >`, `tee`, or any shell command to write code. (The one
+  allowed heredoc feeds text to `log.py` on stdin.)
+- You never edit `logbook.md` directly either: `log.py` is the only writer.
 - All code writing goes through the `Agent` tool. No exceptions.
 
-Violations break the session. There are no exceptions.
+The `guard.py` hook denies violations — treat a denial as a stop sign, not an obstacle.
+Even when a change is one line or "just a config tweak", delegate it.
 
 ---
 
 ## Step 1 — Read the Spec
 
-Resolve `$ARGUMENTS`:
+Run `resolve-spec.py --arg "$ARGUMENTS"`. It stops with the exact message when the
+argument is empty or the spec is missing; relay that message and stop.
 
-- If empty or whitespace-only, stop:
-  > `spec-implement` requires an initiative name or a technical-spec.md path. Invoke as `/spec-implement <name>` or `/spec-implement initiatives/<name>/technical-spec.md`.
-- If `$ARGUMENTS` is a bare initiative name (no `/`), resolve it to
-  `initiatives/<name>/technical-spec.md`.
-- If `$ARGUMENTS` is a path, use it directly.
-- Read the file with the `Read` tool. If it does not exist, stop and tell the user.
-
-Also read the companion `functional-spec.md` in the same directory if it exists —
-it provides the behavioral invariants that TDD phases must satisfy.
+Read `technical=` with the `Read` tool. Also read `functional=` if non-empty — it
+provides the behavioral invariants that TDD phases must satisfy.
 
 ---
 
 ## Step 2 — Scan the Project
 
-Use `Glob` and `Bash` to detect:
+Run `scan-project.py --spec <technical>`. From the JSON:
 
-- Which files from the spec's directory layout already exist (skip their phases).
-- The language(s) and test runner(s) in use or implied by the spec.
-- Any build manifests (`package.json`, `Cargo.toml`, `pyproject.toml`,
-  `build.gradle`, etc.) or other build artifacts already present.
+- `existing` / `missing`: which spec paths are already on disk (skip phases whose
+  outputs all exist). It is a heuristic over backticked paths — confirm with `Read` or
+  `Glob` when a phase looks half-done.
+- `layers`: the test runner per layer (`runner`). A layer with `runner: null`, and any
+  layer the spec implies but has no manifest yet, has no test framework: note
+  > "No test framework detected for <layer>."
 
-Record what exists. Step 3 uses this to mark phases already done.
+  Step 3 inserts a **[Scaffold]** test-harness phase immediately before the first TDD
+  phase of that layer. The tdd-red agent must be able to assume a working test runner.
 
-If no test runner is found for a given language or layer, note it explicitly:
-> "No test framework detected for <layer>."
+Then run `git status --short` on its own. If the working tree has uncommitted changes,
+print and wait for a text reply:
 
-Step 3 will insert a **[Scaffold]** phase to set up the test harness immediately
-before the first TDD phase for that layer. The tdd-red agent must be able to
-assume a working test runner exists when it runs.
+```
+The working tree has uncommitted changes — implementation edits will mix with them.
+(a) Proceed
+(b) Cancel
+```
+
+On (b): stop.
 
 ---
 
 ## Step 3 — Derive the Phase Plan
+
+Before classifying, read `~/.claude/skills/spec-implement/references/classification.md`.
 
 Parse the spec's **Implementation sequence** section — the ordered, numbered phase
 list `spec-technical` writes — into an ordered list of phases. If the spec predates
 that section and has none, fall back to deriving the order from the **Proposed changes**
 section instead.
 
-For each item in the sequence, classify it:
+Classify each item by the nature of its output, never by the spec's testing policy:
 
-### Scaffolding phase
-Output is config, build system, DDL, or project structure with no testable
-behavioral logic. Mark as **[Scaffold]**. Examples:
-- Build manifests and lockfiles (`package.json`, `Cargo.toml`, `pyproject.toml`,
-  `build.gradle`, `go.mod`)
-- Compiler or bundler config (`tsconfig.json`, `vite.config.ts`,
-  `webpack.config.js`, `jest.config.ts`)
-- Directory layout creation (`src/`, `src/handlers/`, `tests/`, `frontend/src/`)
-- Database schema DDL (`CREATE TABLE` statements, indexes, migrations)
-- App entry point wiring with no business logic (routing table, server startup,
-  middleware registration, DI container setup)
-
-### TDD phase
-Output contains functions, handlers, or components with discrete, testable
-behaviors. Mark as **[TDD]**. Examples:
-- Pure utility or domain modules (`validation.py`, `money.go`, `date_utils.ts`)
-- DB query helpers and repository functions (beyond raw schema)
-- REST or RPC handlers (`handlers/tasks.go`, `routes/users.py`, `api/orders.ts`)
-- Service or use-case classes (`OrderService`, `AuthService`)
-- Frontend API clients and typed fetch wrappers (`api.ts`, `client.py`)
-- UI components and pages (`TaskListPage.tsx`, `UserRow.vue`, `LoginForm.svelte`)
-
-### Split when mixed
-If a spec item contains both scaffolding and logic (e.g., a `db.py` that holds
-both `CREATE TABLE` DDL and query helper functions), split it into two
-consecutive sub-phases: **[Scaffold]** first, **[TDD]** second.
-
-### Insert test harness phases when needed
-
-Before the first **[TDD]** phase for each language/layer (backend, frontend,
-etc.), check whether a working test framework already exists for that layer
-(detected in Step 2). If not, insert a **[Scaffold]** phase immediately before it:
-
-[Scaffold]  test harness — install test framework, write config,
-           create tests/ directory, verify  exits 0 on empty suite
-
-Examples:
-- Zig backend, no test step → `[Scaffold]` Zig test harness: add `test` step to
-  `build.zig`, create `src/tests/` directory, verify `zig build test` exits 0
-- React frontend, no Vitest → `[Scaffold]` Vitest setup: install vitest,
-  write `vitest.config.ts`, add `"test"` script to `package.json`, verify
-  `npx vitest run` exits 0 on empty suite
-- Python, no pytest → `[Scaffold]` pytest setup: add `[tool.pytest.ini_options]`
-  to `pyproject.toml`, create `tests/__init__.py`, verify `pytest` exits 0
-
-The goal: when the first tdd-red cycle runs, the test runner command already
-works and exits 0 on an empty or passing suite.
-
-### Classification pitfalls — do not do this
-
-**The spec's testing strategy does NOT affect classification.**
-A spec that says "manual testing only" or "add unit tests in Phase 2" is
-expressing a project policy about test maintenance — it does not make logic
-phases into scaffolding phases. Classify by the nature of the output, always:
-
-- Validation rules, SQL queries, arithmetic, conditional branching → **[TDD]**
-- Routing tables, config files, DDL, server startup wiring → **[Scaffold]**
-
-If you find yourself classifying a handler, component, or domain function as
-**[Scaffold]** because the spec doesn't mention unit tests for it, stop and
-reclassify it as **[TDD]**. The absence of tests is exactly why TDD is needed.
-
-### Mark already-done phases
-Any phase whose output files already exist on disk (detected in Step 2) is
-marked **[Done — skip]**.
+- **[Scaffold]** — config, build system, DDL, project structure, wiring with no logic.
+- **[TDD]** — functions, handlers, components with discrete testable behavior.
+- Mixed item → split into [Scaffold] then [TDD]. Missing test harness → insert a
+  [Scaffold] harness phase before the first [TDD] phase of that layer.
+- Phase whose output files already exist → **[Done — skip]**.
 
 ---
 
@@ -162,6 +132,7 @@ Present the full plan to the user. The example below uses a generic task-manager
 REST API + SPA to illustrate the format — your actual phase names and numbers
 will differ:
 
+```
 Phase plan derived from <spec>:
 
 1. [Scaffold] dependency manifest — package manager manifest, lockfile
@@ -178,18 +149,15 @@ Phase plan derived from <spec>:
 12. [TDD]      frontend/src/api.ts — typed fetch wrappers, error handling
 13. [TDD]      frontend/src/pages/TaskListPage.tsx — fetch lifecycle, render
 14. [TDD]      frontend/src/components/* — TaskRow, FilterBar, NewTaskForm
+```
 
-Then check whether `initiatives/<name>/logbook.md` exists and read its
-frontmatter.
+Then run `log.py status --log <dir>/logbook.md` (if it exits non-zero because the file
+is missing, treat it as `kind=none`). `kind=session` is a resumable implementation log;
+`kind=stub` (a `spec-initiative` log without `last-completed-phase`) and `kind=none`
+mean no existing log — Step 5 merges into a stub rather than overwriting it.
 
-A `logbook.md` counts as a resumable **implementation log only if its frontmatter
-contains `last-completed-phase`**. A `logbook.md` created by `spec-initiative` (frontmatter
-has `status`/`started` but no `last-completed-phase`) is a stub, not a session — treat it
-as "no existing log" and take the fresh path below. Step 5 merges the implementation log
-into that stub rather than overwriting it.
-
-**If an existing implementation log is found** (frontmatter has `last-completed-phase`),
-read that value as `<N>` and print — do not use `AskUserQuestion`:
+**If `kind=session`**, read `last_completed=` as `<N>` and print — do not use
+`AskUserQuestion`:
 
 ```
 Found an existing session (initiatives/<name>/logbook.md).
@@ -203,8 +171,7 @@ Last completed phase: <N>.
 
 Wait for a text reply. On (b): ask which phase number. On (c): proceed as if no log existed. On (d): stop.
 
-**If no implementation log is found** (no `logbook.md`, or only an initiative stub), print —
-do not use `AskUserQuestion`:
+**Otherwise**, print — do not use `AskUserQuestion`:
 
 ```
 (a) Start from the first pending phase
@@ -218,59 +185,20 @@ Wait for a text reply. On (b): ask which phase number and skip earlier phases. O
 
 ## Step 5 — Initialize or Resume the Log
 
-The log lives at `initiatives/<name>/logbook.md`, co-located with the
-specs. `<name>` is the initiative directory — the parent directory of the
-`technical-spec.md`.
+The log lives at `initiatives/<name>/logbook.md`, co-located with the specs — one
+shared `logbook.md` per initiative. `log.py` owns it.
 
-**If starting fresh** (no implementation log, or user chose "start over" in Step 4):
+**Starting fresh** (no log, a stub, or "start over"): run `log.py init` with
+`--spec <technical>`, `--feature <feature-name>`, `--intro` (an opening paragraph: what
+is being built, the full phase plan, the starting phase, and what "done" looks like),
+and `--plan` (the numbered phase plan; pass `-` and a heredoc for multi-line text). Add
+`--overwrite` only for "start over". It creates the file, merges into a stub (keeping the
+stub's `started` and `status`), or overwrites a session log.
 
-There is one shared `logbook.md` per initiative. Do not blindly overwrite it — an
-initiative stub may already be there. Handle three cases:
+**Resuming** (resume, or start from a specific phase, against an existing session): run
+`log.py resume --log <log> --from <N>`.
 
-- **An initiative stub exists** (`logbook.md` with `status`/`started` but no
-  `last-completed-phase`): **merge into it**. Preserve the existing `started` and `status`
-  values, add `spec:` and `last-completed-phase: 0` to the frontmatter, then append the
-  `# Implementation Log` body and `## Phase Plan` below the existing content.
-- **No `logbook.md` at all**: create it from scratch with the structure below.
-- **User chose "start over"**: overwrite the file entirely with the structure below.
-
-The resulting `logbook.md` has this structure (frontmatter keys are merged with any the
-stub already had — never drop the stub's `started`/`status`):
-
-~~~markdown
----
-spec: initiatives/<name>/technical-spec.md
-started: <YYYY-MM-DD>
-last-completed-phase: 0
-status: in-progress
----
-
-# Implementation Log: <feature-name>
-
-<opening paragraph: what is being built, the full phase plan, the starting
-phase, and what "done" looks like for this implementation>
-
-## Phase Plan
-
-1. [Scaffold] ...
-...
-N. [TDD] ...
-~~~
-
-**If resuming** (user chose "resume" or "start from a specific phase" against
-an existing log):
-
-Read the existing log. Set the resume point from `last-completed-phase` or
-the user-specified phase number. Append a divider to the log:
-
-~~~markdown
-
----
-Resumed: <YYYY-MM-DD>, starting from phase <N>
----
-~~~
-
-Tell the user the log path and the phase being resumed from.
+Tell the user the log path and the phase being started or resumed from.
 
 **Load TDD lessons** (for use in all TDD phases): read
 `~/.claude/tdd/lessons/LESSONS.md`. If it exists, read all linked lesson
@@ -281,10 +209,16 @@ context is empty.
 
 ## Step 6 — Execute Phases
 
-For each pending phase in order:
+For each pending phase in order, print:
 
-Print:
-━━━ Phase /:  [] ━━━
+```
+━━━ Phase <N>/<total>: <name> [<Scaffold|TDD>] ━━━
+```
+
+Before the phase, run `scan-project.py --spec <technical> --require <path> ...` with
+every file prior phases produced that this phase imports or depends on. If it prints
+`"status": "missing"`, stop and report `required_missing` — a prior phase failed or was
+skipped.
 
 If `technical-spec.md` documents that this phase depends on an external service
 (e.g. a docker-compose-based test harness, a local database container), **you**
@@ -306,7 +240,8 @@ If the files to be written include functions with validation rules, calculated
 outputs, or conditional branching on domain inputs, this phase was misclassified
 — stop, reclassify it as **[TDD]**, and execute it as a TDD phase instead.
 
-Invoke the `Agent` tool with `subagent_type: "claude"`. The prompt must include:
+Invoke the `Agent` tool with `subagent_type: "claude"`. That agent type has every tool,
+so the prompt must restate its limits. The prompt must include:
 
 1. The spec excerpt describing exactly what this phase produces (files, schema,
    config structure).
@@ -314,10 +249,11 @@ Invoke the `Agent` tool with `subagent_type: "claude"`. The prompt must include:
 3. The build verification command appropriate for the project's stack.
 4. This instruction:
    > Create the scaffolding exactly as specified. Do not add logic beyond what
-   > the spec defines for this phase. After writing all files, verify the project
-   > builds or installs cleanly (e.g. `npm install`, `cargo build`, `go build ./...`,
-   > `pip install -e .`, or the appropriate command). Report each file written
-   > and any errors.
+   > the spec defines for this phase. Write only the files listed for this phase.
+   > Never edit `initiatives/*/logbook.md`, and do not start or stop services.
+   > After writing all files, verify the project builds or installs cleanly (e.g.
+   > `npm install`, `cargo build`, `go build ./...`, `pip install -e .`, or the
+   > appropriate command). Report each file written and any errors.
 
 Wait for the agent to complete. Capture: files written, verification result.
 
@@ -325,7 +261,7 @@ If the agent reports a build error: **stop**. Report the error and the list of
 files written. Do not attempt to fix it automatically — ask the user to resolve
 it and re-run from this phase.
 
-Update the master log with the phase result before moving to the next phase.
+Record the phase: `log.py phase-done --log <log> --phase <N> --type Scaffold --name <name> --summary <files written, verification result>`.
 
 ---
 
@@ -343,8 +279,9 @@ Gather context to pass to every agent in this phase:
 - The functional-spec.md invariants that this phase covers (reference them by number).
 - A list of all files produced by prior phases that this phase may import or
   depend on.
-- The test runner command for this layer (e.g., `pytest tests/`, `go test ./...`,
-  `cargo test`, `npm test`, `npx vitest run`, `bundle exec rspec`).
+- The test runner command for this layer — `runner` for the layer in the
+  `scan-project.py` output (e.g., `pytest tests/`, `go test ./...`, `cargo test`,
+  `npm test`, `npx vitest run`, `bundle exec rspec`).
 
 #### 6b — Derive the Next Behavior
 
@@ -359,15 +296,21 @@ The behavior must:
 4. Be a single unambiguous sentence
 
 Print:
-→ Cycle .:
+```
+→ Cycle <N>.<K>: <behavior>
+```
 
-**Update the master log before invoking any agent.**
+**Record the cycle before invoking any agent:**
+`log.py cycle --log <log> --phase <N> --n <K> --behavior <behavior>`.
 
 #### 6c — Red
 
 Invoke `tdd-red` via the `Agent` tool. Pass:
 - The phase context (spec excerpt, prerequisite files, test runner command)
 - The exact behavior to test
+
+`tdd-red` can write and edit files and run test commands only; it must write only the
+test for this behavior and touch no implementation file.
 
 Wait for completion. Capture: test file, test name.
 
@@ -382,6 +325,9 @@ Invoke `tdd-green` via the `Agent` tool. Pass:
   > "Before writing implementation, review these TDD anti-patterns and avoid
   > them: [lesson context]"
 
+`tdd-green` must never touch test files; it writes the minimum implementation and
+verifies the tests are green.
+
 Wait for completion. Capture: implementation files changed.
 
 If the agent fails: report the error and stop.
@@ -392,36 +338,41 @@ Invoke `tdd-refactor` via the `Agent` tool. Pass:
 - The phase context
 - All implementation files accumulated in this phase so far (every cycle)
 
+`tdd-refactor` must introduce no new behavior, never touch test files, and verify the
+tests stay green.
+
 Wait for completion.
 
 #### 6f — Log and Evaluate
 
-Update the master log. Print:
-✓ Red:
-✓ Green:
+Count the phase's covered behaviors: every function, endpoint, component, error path,
+and invariant in the spec excerpt that now has a passing test. Record the cycle:
+`log.py cycle-done --log <log> --phase <N> --n <K> --covered <count> --summary <red / green / refactor one-liner>`.
+
+Print:
+```
+✓ Red: <test name>
+✓ Green: <implementation files changed>
 ✓ Refactor: <what changed, or "nothing">
-Cycle: .
+Cycle: <N>.<K>
+```
 
-Assess whether this phase's goal is fully implemented:
+Run `stall.py --log <log> --phase <N>` and act on `status=`:
 
-- **Default is to continue.** Completeness is judged against the spec excerpt,
-  not a cycle count: list every function, endpoint, component, error path, and
-  covered invariant in the phase, and keep cycling until each has a passing
-  test. A phase with many behaviors legitimately needs many cycles.
-- **After 15 cycles without completion**: print a one-line progress note
-  (covered / remaining) and **keep going** — do not ask.
-- **Hard stop only when stalled**: stop and ask the user only if 3 consecutive
-  cycles add no new covered behavior (e.g. Red keeps producing already-passing
-  tests, or Green cannot pass), or after 30 cycles. Report what was and was not
+- `continue` — keep cycling unless the phase is complete (below).
+- `note` — print a one-line progress note (covered / remaining) and **keep going** — do not ask.
+- `stop` — stop and ask the user (`reason=stalled`: 3 consecutive cycles added no new
+  covered behavior; `reason=max-cycles`: 30 cycles). Report what was and was not
   implemented, and offer: continue, split the phase, or move on leaving it partial.
-- **When complete**: print `✓ Phase <N> complete`, then:
-  1. Update `last-completed-phase: <N>` in the log frontmatter.
-  2. Append a phase section to the log:
-     ~~~markdown
-     ## Phase <N> — [type] <name>
-     <phase summary: behaviors tested, files written, cycles taken, deviations from spec>
-     ~~~
-  3. Move to the next phase.
+
+**Completeness is your judgment**, made against the spec excerpt, not a cycle count: list
+every function, endpoint, component, error path, and covered invariant in the phase,
+and keep cycling until each has a passing test. A phase with many behaviors legitimately
+needs many cycles — even when the first few cycles went green, keep going.
+
+**When complete**: print `✓ Phase <N> complete`, then run
+`log.py phase-done --log <log> --phase <N> --type TDD --name <name> --summary <behaviors tested, files written, cycles taken, deviations from spec>`
+and move to the next phase.
 
 ---
 
@@ -430,9 +381,9 @@ Assess whether this phase's goal is fully implemented:
 After Step 4's confirmation, run Steps 6–7 to completion without pausing. Do
 not end your turn, summarize progress, or ask "shall I continue?" between
 cycles or between phases. The only legal stops are those in **When to Stop and
-Ask**, the stall rule in 6f, and an agent failure. A phase is complete only
-when every behavior in its spec excerpt has a passing test — never because
-the first few cycles went green.
+Ask**, a `stop` from `stall.py`, a script or agent failure, and the dirty-tree
+menu in Step 2. A phase is complete only when every behavior in its spec excerpt has
+a passing test.
 
 ---
 
@@ -443,26 +394,20 @@ the user asked to leave it running.
 
 When all phases are complete (or the user halts early), print a final summary:
 
+```
 Implementation complete.
 
-Phases executed:    scaffolding,  TDD
-Total TDD cycles:
-Files created:
-Phases skipped:
+Phases executed:    <S> scaffolding, <T> TDD
+Total TDD cycles:   <count>
+Files created:      <count>
+Phases skipped:     <count>
+```
 
-Write the master log closing paragraph: what was built, how the design evolved
-from the spec, any deviations or surprises noted during implementation.
-Then update `status: complete` in the log frontmatter.
-
-Then append a `## Implementation files` section listing every file written or
-modified across all phases, one per bullet:
-
-~~~markdown
-## Implementation files
-
-- path/to/file1
-- path/to/file2
-~~~
+Then run `log.py close --log <log> --summary <closing paragraph> --files -` with the
+list of every file written or modified across all phases on stdin, one path per line.
+The closing paragraph says what was built, how the design evolved from the spec, and
+any deviations or surprises noted during implementation. `close` sets `status: complete`
+and appends the `## Implementation files` section.
 
 Finally, print:
 
@@ -474,8 +419,8 @@ Next: /spec-verify-static <name>, then write .claude/skills/run-<name>/SKILL.md 
 
 ## When to Stop and Ask
 
-- A phase's prerequisite files do not exist (a prior phase failed or was
-  skipped): stop and report before attempting the phase.
+- A phase's prerequisite files do not exist (`scan-project.py --require` reports
+  them): stop and report before attempting the phase.
 - The spec's implementation sequence is ambiguous or missing: ask the user
   how to order the phases before deriving the plan.
 - A scaffolding agent produces output that contradicts a spec constraint: stop
