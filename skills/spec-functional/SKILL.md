@@ -78,6 +78,22 @@ Attempt to read `<project-root>/initiatives/<name>/initiative.md`.
   (b) Cancel
   ```
 
+Research lives under `initiatives/<src>/`, where `<src>` is `<name>`, or `<parent>` if
+`<name>` is a partition part (its `initiative.md` ends with `Part of [<parent>](…)`). If
+`<src>/logbook.md` has `research: open` in its frontmatter, stop:
+
+```
+Research is still open for <src>. Run /spec-research-end first
+(or set `research: closed` in initiatives/<src>/logbook.md to override).
+```
+
+Otherwise, if `initiatives/<src>/research/` exists, read every `*.md` in it; if not,
+proceed silently. Use it as feasibility input: it shows what is
+achievable and how, which can shape the behaviors worth specifying. Findings tagged `tested`
+are reliable; treat `documented` and `inferred` ones as unverified. Keep implementation
+detail — algorithms, snippets, library choices — out of the spec: invariants describe only
+what the consumer experiences.
+
 **Step 5 — Gather remaining context**
 
 Using the definition as a starting point, identify what is still needed before drafting.

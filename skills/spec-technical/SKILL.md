@@ -49,6 +49,22 @@ Write the functional spec first with /spec-functional, then re-run /spec-technic
 
 **Step 3 — Research the codebase**
 
+Research lives under `initiatives/<src>/`, where `<src>` is `<name>`, or `<parent>` if
+`<name>` is a partition part (its `initiative.md` ends with `Part of [<parent>](…)`). If
+`<src>/logbook.md` has `research: open` in its frontmatter, stop:
+
+```
+Research is still open for <src>. Run /spec-research-end first
+(or set `research: closed` in initiatives/<src>/logbook.md to override).
+```
+
+Otherwise, read every `*.md` in `initiatives/<src>/research/` if the directory exists, and
+proceed silently if it doesn't. Treat their Findings as candidate approaches and prior art for the plan, not as
+facts about this codebase: `tested` findings were verified elsewhere, `documented` and
+`inferred` ones are unverified. Check every approach you adopt against the code below, and
+cite the research file when the plan builds on it. If research conflicts with the code,
+the code wins — say so in the plan.
+
 Use Glob to locate source files at the project root. If no source files are found, stop:
 
 ```

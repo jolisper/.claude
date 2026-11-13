@@ -94,6 +94,9 @@ The `spec-*` family models a full agent-driven software workflow: **intent → b
 
 ```
 /spec-initiative  →  initiative.md          why: problem, goals, non-goals, scope
+/spec-research-start      →  research/agenda.md   optional: open a research phase (goals still provisional)
+/spec-research-checkpoint →  research/*.md        save progress, phase stays open
+/spec-research-end        →  research/*.md        close it: findings, decisions, approved initiative amendments
 /spec-functional  →  functional-spec.md     what: numbered behavior invariants (auto-reads initiative.md)
 /spec-partition   →  split functional specs (optional, for large specs)
 /spec-technical   →  technical-spec.md      how: codebase-grounded implementation plan
@@ -106,6 +109,9 @@ The `spec-*` family models a full agent-driven software workflow: **intent → b
 | Skill | Role |
 |---|---|
 | `/spec-initiative` | Creates `initiative.md` and the initiative branch from `origin/main`. Free prose, no invariants |
+| `/spec-research-start` | Optional. Opens a research phase after `/spec-initiative`: agrees an agenda from the initiative's open questions and marks `research: open` in `logbook.md`. While open, `/spec-functional` and `/spec-technical` refuse to run |
+| `/spec-research-checkpoint` | Saves the research so far to `initiatives/<name>/research/<topic>.md` (source-traced findings tagged `tested`/`documented`/`inferred`, options, dead ends) and keeps the phase open. Cheap; run it before `/clear` or compaction |
+| `/spec-research-end` | Confirms focus and decisions, saves the research like a checkpoint, proposes approved amendments to `initiative.md`, and closes the phase |
 | `/spec-functional` | Behavioral spec from the consumer's perspective, as numbered invariants. Required input for everything downstream |
 | `/spec-partition` | Splits a large functional spec (≳30 invariants or unrelated concerns) into an ordered chain of independently implementable specs, without adding, removing or rewording any invariant |
 | `/spec-technical` | Researches the codebase and turns the functional spec into an implementation plan. Stops if no functional spec exists |

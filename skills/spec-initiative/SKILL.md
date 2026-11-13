@@ -127,6 +127,7 @@ After both writes succeed, output:
 initiatives/<name>/initiative.md written.
 initiatives/<name>/logbook.md created.
 Next: /spec-functional initiatives/<name>/initiative.md
+      (or /spec-research-start first, if the open questions are too large for the codebase alone)
 ```
 
 ## initiative.md structure
