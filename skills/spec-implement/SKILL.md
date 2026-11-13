@@ -47,7 +47,7 @@ script with `--help` for its flags.
 | `scan-project.py` | Step 2 and phase prerequisites: existing files, runners, layers with no test harness |
 | `log.py` | Every `logbook.md` write: `init`, `resume`, `cycle`, `cycle-done`, `phase-done`, `close` |
 | `stall.py` | Step 6f: continue / note / stop decision from the logged cycles |
-| `guard.py` | Hook (frontmatter): blocks the orchestrator from writing anything but the logbook |
+| `guard.py` | Hook (frontmatter): warns when the orchestrator writes anything but the logbook; silent once every implementation log is `status: complete` |
 
 **If a script exits non-zero:** print its `message=` and `hint=`, and stop. Do not
 re-implement what the script does by hand, and do not retry with different flags unless
@@ -65,7 +65,8 @@ unconditionally — not even as a workaround:
 - You never edit `logbook.md` directly either: `log.py` is the only writer.
 - All code writing goes through the `Agent` tool. No exceptions.
 
-The `guard.py` hook denies violations — treat a denial as a stop sign, not an obstacle.
+The `guard.py` hook warns on violations but does not block them — treat a warning as a stop
+sign, not an obstacle.
 Even when a change is one line or "just a config tweak", delegate it.
 
 ---
