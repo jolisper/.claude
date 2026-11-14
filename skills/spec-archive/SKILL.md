@@ -53,7 +53,15 @@ Read `<root>/initiatives/<name>/logbook.md`. If missing, stop:
 initiatives/<name>/logbook.md not found. Cannot verify completeness.
 ```
 
-Read the frontmatter `status` field. If not `complete`, ask:
+**Partitioned parent.** If `initiatives/<name>/partition.md` exists, the parent holds no
+implementation; its parts do. Skip the `status` check. Read the part dirs from the
+`## Parts` list in `partition.md` (backticked names). For each, look in
+`initiatives/<part>/` then `initiatives/_archive/<part>/`; its `logbook.md` status must be
+`complete` or `archived`. If any part is missing or not done, list them and ask the same
+(a) Archive anyway / (b) Cancel menu below. If all are done, print
+`Partitioned parent: all <N> parts done.` and continue. Step 5 is skipped for the parent.
+
+Otherwise read the frontmatter `status` field. If not `complete`, ask:
 
 ```
 logbook.md status is "<current-status>", not "complete".
@@ -65,6 +73,8 @@ How do you want to proceed?
 On (b): stop.
 
 ## Step 5 — Uncommitted changes check
+
+If this is a partitioned parent, print the "skipping" line below and proceed to Step 6.
 
 Read `logbook.md` to identify the implementation files changed during the initiative.
 
@@ -89,7 +99,8 @@ On (b): stop.
 
 ## Step 6 — Retrospective note
 
-Read `logbook.md` and generate a retrospective paragraph covering: phases completed,
+Read `logbook.md` (for a partitioned parent, also each part's `logbook.md`, and draft one
+retrospective across the parts) and generate a retrospective paragraph covering: phases completed,
 any deviations from the functional spec, and lessons or observations from the implementation.
 
 Present the draft and ask:
