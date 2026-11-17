@@ -140,7 +140,8 @@ export function register(on: On) {
   on('prompt.submit', async ($, e, next) => {
     const prompt = (e.text || '').trim()
 
-    if (prompt.length < 8 || prompt.startsWith('/') || prompt.startsWith('<agent-message')) {
+    // Synthetic prompts (agent hand-backs, monitor/task notifications) are not user-typed text
+    if (prompt.length < 8 || prompt.startsWith('/') || /^<(agent-message|task-notification)|^\[SYSTEM NOTIFICATION/.test(prompt)) {
       return next(e)
     }
 

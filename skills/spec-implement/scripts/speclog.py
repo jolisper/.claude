@@ -8,8 +8,38 @@ import os
 import re
 import sys
 
+# Maximum auto-verify rounds per cycle.
+MAX_ROUNDS = 2
+
 FRONTMATTER = re.compile(r"\A---\n(.*?)\n---\n?", re.S)
 CYCLE = re.compile(r"^- cycle (\d+)\.(\d+)(?: \[covered=(\d+)\])?: (.*)$", re.M)
+
+
+def _entry_prefix(round, stage, invariant):
+    return f"- [r{round}/{stage}] inv {invariant}:"
+
+
+def format_entry(round, stage, invariant, text, decision, reason, files=None, action=None, regression=False, fix_id=None):
+    line = f"{_entry_prefix(round, stage, invariant)} {text} — {decision}: {reason}"
+    if action and action != "none":
+        line += f" [action: {action}]"
+    if fix_id:
+        line += f" [fix: {fix_id}]"
+    if files:
+        line += f" [files: {', '.join(files)}]"
+    if regression:
+        line += " [regression]"
+    return line
+
+
+def has_entry(block, round, stage, invariant):
+    prefix = _entry_prefix(round, stage, invariant)
+    return any(line.startswith(prefix) for line in block.splitlines())
+
+
+def latest_run(body):
+    start = body.rindex("### Run")
+    return body[start:]
 
 
 def die(msg, hint):

@@ -10,6 +10,9 @@ Usage: log.py <command> [flags]      (free-text flags accept '-' to read stdin)
   cycle-done  --log PATH --phase P --n K --covered C --summary TEXT
   phase-done  --log PATH --phase N --type Scaffold|TDD --name NAME --summary TEXT
   close       --log PATH --summary TEXT --files TEXT
+  auto-start  --log PATH --rounds N
+  auto-entry  --log PATH --round N --stage S --invariant N --text TEXT --decision D --action A --reason TEXT [--files F ...] [--regression]
+  auto-note   --log PATH --round N --text TEXT
 
 Output is key=value lines on stdout, starting with status=ok|unchanged|error.
 Errors go to stdout as status=error/message=/hint= with exit code 2.
@@ -138,6 +141,50 @@ def cmd_close(a):
     S.out(files=len(files))
 
 
+def cmd_auto_start(a):
+    text = S.read(a.log)
+    lines, _ = S.split(text)
+    if S.get(lines, "last-completed-phase") is None:
+        S.die(f"{a.log} has no last-completed-phase, the run is not closed",
+              "run /spec-implement to completion first")
+    heading = "" if "## Auto verification" in text else "\n## Auto verification\n"
+    S.write(a.log, text + f"{heading}\n### Run {date.today().isoformat()}\n\n"
+                          f"Bound: up to {a.rounds} rounds\n")
+    S.out()
+
+
+def cmd_auto_entry(a):
+    text = S.read(a.log)
+    require_run(a.log, text)
+    if S.has_entry(S.latest_run(text), a.round, a.stage, a.invariant):
+        print("status=unchanged")
+        return
+    entry_text = S.text_arg(a.text)
+    if re.fullmatch(r"invariant \d+( \([^)]*\))?", entry_text, re.I):
+        S.die("--text is a placeholder, not the invariant text",
+              "copy the invariant's text from functional-spec.md")
+    line = S.format_entry(a.round, a.stage, a.invariant, entry_text, a.decision, S.text_arg(a.reason),
+                         files=a.files, action=a.action, regression=a.regression)
+    append_line(a.log, text, line)
+    S.out()
+
+
+def cmd_auto_note(a):
+    text = S.read(a.log)
+    require_run(a.log, text)
+    append_line(a.log, text, f"- [r{a.round}] note: {S.text_arg(a.text)}")
+    S.out()
+
+
+def require_run(path, text):
+    if "### Run" not in text:
+        S.die(f"{path} has no auto-verification run", "run 'auto-start' first")
+
+
+def append_line(path, text, line):
+    S.write(path, text.rstrip("\n") + "\n" + line + "\n")
+
+
 def parser():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -156,6 +203,12 @@ def parser():
     add("cycle-done", cmd_cycle_done, "log", "phase", "n", "covered", "summary", phase=int, n=int, covered=int)
     add("phase-done", cmd_phase_done, "log", "phase", "type", "name", "summary", phase=int)
     add("close", cmd_close, "log", "summary", "files")
+    add("auto-start", cmd_auto_start, "log", "rounds", rounds=int)
+    ae = add("auto-entry", cmd_auto_entry, "log", "round", "stage", "invariant", "text", "decision", "action",
+        "reason", round=int, invariant=int)
+    ae.add_argument("--files", nargs="+", default=None)
+    ae.add_argument("--regression", action="store_true")
+    add("auto-note", cmd_auto_note, "log", "round", "text", round=int)
     return p
 
 
