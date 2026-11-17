@@ -115,7 +115,7 @@ def main():
         sys.exit(0)
 
     # Bypass: synthetic hand-back from a background agent/skill, not user-typed text
-    if prompt.startswith("<agent-message"):
+    if prompt.startswith(("<agent-message", "<task-notification", "[SYSTEM NOTIFICATION")):
         _log("SKIP: agent hand-back")
         clear_pending(session_id)
         sys.exit(0)
