@@ -9,7 +9,7 @@ description: >
   across all phases. Part of the spec-* family: run after spec-functional and
   spec-technical.
 disable-model-invocation: true
-argument-hint: "<initiative-name> | <path to technical-spec.md>"
+argument-hint: "<initiative-name> | <path to technical-spec.md> [--auto]"
 allowed-tools: Read Glob Bash Agent
 when_to_use: >
   When you want to implement a full technical-spec.md spec using TDD for logic phases
@@ -43,10 +43,11 @@ script with `--help` for its flags.
 
 | Script | Does |
 |---|---|
-| `resolve-spec.py` | Step 1: argument to spec paths |
+| `resolve-spec.py` | Step 1: argument to spec paths; also reports `auto=`/`rounds=` |
 | `scan-project.py` | Step 2 and phase prerequisites: existing files, runners, layers with no test harness |
-| `log.py` | Every `logbook.md` write: `init`, `resume`, `cycle`, `cycle-done`, `phase-done`, `close` |
+| `log.py` | Every `logbook.md` write: `init`, `resume`, `cycle`, `cycle-done`, `phase-done`, `close`; Step 8: `auto-start`, `auto-entry`, `auto-note` |
 | `stall.py` | Step 6f: continue / note / stop decision from the logged cycles |
+| `auto.py` | Step 8: state machine: `next` says what to do, `advance` validates the result and writes the log; also `parse`, `decide`, `summary` |
 | `guard.py` | Hook (frontmatter): warns when the orchestrator writes anything but the logbook; silent once every implementation log is `status: complete` |
 
 **If a script exits non-zero:** print its `message=` and `hint=`, and stop. Do not
@@ -78,6 +79,11 @@ argument is empty or the spec is missing; relay that message and stop.
 
 Read `technical=` with the `Read` tool. Also read `functional=` if non-empty — it
 provides the behavioral invariants that TDD phases must satisfy.
+
+The `resolve-spec.py` output also has `auto=` and, when `true`, `rounds=`. If
+`auto=true`, print `Auto mode active — up to <rounds> verify → act rounds.` before
+anything else in Step 2. Pass the whole `$ARGUMENTS` (including `--auto`) to
+`resolve-spec.py --arg`; it strips the flag itself.
 
 ---
 
@@ -410,11 +416,28 @@ The closing paragraph says what was built, how the design evolved from the spec,
 any deviations or surprises noted during implementation. `close` sets `status: complete`
 and appends the `## Implementation files` section.
 
-Finally, print:
+Finally, when `auto=false`, print:
 
 ```
 Next: /spec-verify-static <name>, then write .claude/skills/run-<name>/SKILL.md and /spec-verify-dynamic <name>
 ```
+
+When `auto=true`, do not print it; continue to Step 8 right after `log.py close` and
+the summary block.
+
+---
+
+## Step 8 — Auto verification (only when auto=true)
+
+Read `~/.claude/skills/spec-implement/references/auto-mode.md` and follow it to
+completion. It carries its own final summary, which replaces the `Next:` pointer.
+
+Its inputs from earlier steps: `<log>`, `<name>`, `<root>`, `rounds` (Step 1), and each
+layer's `runner` (Step 2).
+
+The "Do not stop early" rule applies to Step 8 as well. The stops in **When to Stop and
+Ask** still apply, plus the stops the reference defines: baseline red, safety stop,
+regression, delegated-step failure, and a `decide` stop (clean, no-progress, bound).
 
 ---
 
@@ -430,3 +453,5 @@ Next: /spec-verify-static <name>, then write .claude/skills/run-<name>/SKILL.md 
   flag the overlap and ask whether to merge the phases or adjust boundaries.
 - The user asks to pause: stop cleanly after the current cycle completes,
   report where things stand, and confirm how to resume.
+- In auto mode, the stops defined in `auto-mode.md` hand control to the user and end the
+  run with the final summary.
